@@ -51,11 +51,11 @@ This project is **open-source** and available under the **MIT License**. Feel fr
 
 ## 👥 Team
 
-| Name                 | Role                         | GitHub/Contact                                 |
-| -------------------- | ---------------------------- | ---------------------------------------------- |
-| **Mahmoud Al-Sawan** | Creator & Embedded Developer | [@JoeSawan](https://github.com/JoeSawan)       |
-| **Maha Al-Haweila**  | Frontend Developer           | -                                              |
-| **Aya Al-Ghadban**   | Backend Developer            | [@ayalghadban](https://github.com/ayalghadban) |
+| Name                 | Role                         | GitHub/Contact                                   |
+| -------------------- | ---------------------------- | ------------------------------------------------ |
+| **Mahmoud Al-Sawan** | Creator & Embedded Developer | [@JoeSawan](https://github.com/JoeSawan)         |
+| **Maha Al-Haweila**  | Frontend Developer           | [@mahaalhawila](https://github.com/mahaalhawila) |
+| **Aya Al-Ghadban**   | Backend Developer            | [@ayalghadban](https://github.com/ayalghadban)   |
 
 ---
 
