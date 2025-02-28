@@ -34,7 +34,7 @@ To use this project, you will need:
 1. **Clone the repository:**
 
    ```sh
-   git clone https://github.com/your-repo/MohiminIO.git
+   git clone https://github.com/JoeSawan/Musaitir-IO.git
    ```
 
 2. **Open `controller_commands.ino` in the Arduino IDE**
@@ -80,7 +80,7 @@ To contribute:
 
 ## 🌐 Links
 
-🔗 **GitHub Repository:** [Musaitir IO](https://github.com/your-repo/MohiminIO)  
+🔗 **GitHub Repository:** [Musaitir IO](https://github.com/JoeSawan/Musaitir-IO.git)  
 📘 **Documentation:** [Musaitir IO Docs](https://your-docs-url.com)
 
 ---
