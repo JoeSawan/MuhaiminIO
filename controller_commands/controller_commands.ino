@@ -41,7 +41,7 @@ void processCommand() {
   // تنفيذ الأمر بناءً على رقمه
   switch (commandID) {
     case 1: ARPins(param1); break;  // قراءة قيمة أنالوج
-    case 2: RPINx(param1); break;  // قراءة قيمة رقمية
+    case 2: RPINx(param1); break;  // قراءة قيمة رقمية (غير مستخدم حالياً) يتم قراءة ققيمة المنفذ وتحليلهل بالجهاز للسرعة 
     case 3: RPORT(param1); break;  // قراءة قيمة منفذ
     case 4: WPORTD(param1, param2); break;  // كتابة قيمة إلى منفذ
     case 5: RDDRS(param1); break;  // قراءة سجل DDR
