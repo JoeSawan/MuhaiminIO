@@ -1,10 +1,10 @@
-# MohiminIO - Arduino Controller
+# Musaitir IO - Arduino Controller
 
 ![MohiminIO Banner](https://your-image-url.com/banner.png)
 
 ## 📌 Project Overview
 
-**MohiminIO** is a fast and efficient system for executing commands sent from a computer to an **Arduino Uno** via a custom-designed interface. The name **"MohiminIO"** is inspired by the Arabic word **"مُهَيْمِن"** (meaning "controller" or "dominant") combined with **"IO"** representing Input/Output operations.
+**Musaitir IO** is a fast and efficient system for executing commands sent from a computer to an **Arduino Uno** via a custom-designed interface. The name **"Musaitir IO"** is inspired by the Arabic word **"مُسيطر"** (meaning "controller" or "dominant") combined with **"IO"** representing Input/Output operations.
 
 This system enables **real-time pin monitoring**, **seamless control**, and **fast execution**, making it an ideal tool for embedded systems developers and Arduino enthusiasts.
 
@@ -80,9 +80,9 @@ To contribute:
 
 ## 🌐 Links
 
-🔗 **GitHub Repository:** [MohiminIO](https://github.com/your-repo/MohiminIO)  
-📘 **Documentation:** [MohiminIO Docs](https://your-docs-url.com)
+🔗 **GitHub Repository:** [Musaitir IO](https://github.com/your-repo/MohiminIO)  
+📘 **Documentation:** [Musaitir IO Docs](https://your-docs-url.com)
 
 ---
 
-Made with ❤️ by the **MohiminIO Team** 🚀
+Made with ❤️ by the **Musaitir IO Team** 🚀
