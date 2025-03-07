@@ -19,7 +19,7 @@
 
         .element-row {
             display: grid;
-            grid-template-columns: 70px 1fr 50px 50px;
+            grid-template-columns: 70px 1fr 100px 50px;
             align-items: center;
             gap: 10px;
             background: var(--white);
@@ -58,12 +58,12 @@
 
         .status-led.active {
             background: var(--primary);
-            box-shadow: 0 0 8px var(--accent);
+            box-shadow: 0 0 10px var(--accent);
         }
 
         .controls {
             display: flex;
-            gap: 10px;
+            justify-content: center;
             align-items: center;
             padding: 0 10px;
         }
@@ -84,8 +84,8 @@
         .switch {
             position: relative;
             display: inline-block;
-            width: 40px;
-            height: 24px;
+            width: 60px;
+            height: 34px;
         }
 
         .switch input {
@@ -103,14 +103,14 @@
             bottom: 0;
             background: #ccc;
             transition: .4s;
-            border-radius: 24px;
+            border-radius: 34px;
         }
 
         .slider:before {
             position: absolute;
             content: "";
-            height: 16px;
-            width: 16px;
+            height: 26px;
+            width: 26px;
             left: 4px;
             bottom: 4px;
             background: var(--white);
@@ -123,7 +123,7 @@
         }
 
         input:checked + .slider:before {
-            transform: translateX(16px);
+            transform: translateX(26px);
         }
     </style>
 </head>
@@ -131,12 +131,26 @@
     <div id="container"></div>
 
 <script>
-const elements = Array.from({length: 21}, (_,i) => ({
-    id: i < 14 ? `D${i}` : `A${i-14}`,
-    mode: 0,
-    modes: ["💡","⚡","🔌","🌓","📊"],
-    value: 0
-}));
+const pwmPins = new Set(["D3","D5","D6","D9","D10","D11"]);
+const analogPins = new Set(["A0","A1","A2","A3","A4","A5","A6","A7"]);
+
+const elements = Array.from({length: 21}, (_,i) => {
+    const isAnalog = i >= 14;
+    const id = isAnalog ? `A${i-14}` : `D${i}`;
+    
+    return {
+        id: id,
+        mode: 0,
+        modes: getModesForPin(id),
+        value: 0
+    };
+});
+
+function getModesForPin(id) {
+    if(pwmPins.has(id)) return ["💡","⚡","🔌","🌓"];
+    if(analogPins.has(id)) return ["💡","⚡","📊"];
+    return ["💡","⚡","🔌"];
+}
 
 function createElement(el) {
     const div = document.createElement('div');
@@ -144,9 +158,9 @@ function createElement(el) {
     div.innerHTML = `
         <div class="pin-id">${el.id}</div>
         <div class="controls">
-            ${el.mode === 3 ? `<input type="range" min="0" max="255">` : ''}
-            ${el.mode === 4 ? `<progress value="0" max="1024"></progress>` : ''}
-            ${el.mode === 2 ? `<label class="switch"><input type="checkbox"><div class="slider"></div></label>` : ''}
+            ${el.modes[el.mode] === '🌓' ? '<input type="range" min="0" max="255">' : ''}
+            ${el.modes[el.mode] === '📊' ? '<progress value="0" max="1024"></progress>' : ''}
+            ${el.modes[el.mode] === '🔌' ? '<label class="switch"><input type="checkbox"><div class="slider"></div></label>' : ''}
         </div>
         <div class="status-led ${el.value ? 'active' : ''}"></div>
         <button class="mode-btn">${el.modes[el.mode]}</button>
@@ -163,28 +177,28 @@ elements.forEach(el => {
 document.addEventListener('click', (e) => {
     if(e.target.closest('.mode-btn')) {
         const row = e.target.closest('.element-row');
-        const currentMode = parseInt(row.dataset.mode) || 0;
-        const newMode = (currentMode + 1) % 5;
+        const pinId = row.querySelector('.pin-id').textContent;
+        const element = elements.find(el => el.id === pinId);
         
-        row.dataset.mode = newMode;
-        e.target.textContent = elements[0].modes[newMode];
-        updateControls(row, newMode);
+        element.mode = (element.mode + 1) % element.modes.length;
+        row.querySelector('.mode-btn').textContent = element.modes[element.mode];
+        updateControls(row, element);
     }
 });
 
-function updateControls(row, mode) {
+function updateControls(row, element) {
     const controls = row.querySelector('.controls');
     controls.innerHTML = '';
     
-    switch(mode) {
-        case 2: 
-            controls.innerHTML = '<label class="switch"><input type="checkbox"><div class="slider"></div></label>';
-            break;
-        case 3:
+    switch(element.modes[element.mode]) {
+        case '🌓':
             controls.innerHTML = '<input type="range" min="0" max="255">';
             break;
-        case 4:
+        case '📊':
             controls.innerHTML = '<progress value="0" max="1024"></progress>';
+            break;
+        case '🔌':
+            controls.innerHTML = '<label class="switch"><input type="checkbox"><div class="slider"></div></label>';
             break;
     }
 }
