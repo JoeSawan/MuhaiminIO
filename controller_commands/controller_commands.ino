@@ -92,7 +92,6 @@ void processCommand() {
       break;
     case 6:  // كتابة دبوس رقمي
       if (param1 >= 0 && param1 <= 13 && (param2 == 0 || param2 == 1)) {
-        pinMode(param1, OUTPUT);
         digitalWrite(param1, param2);
         Serial.println("OK 6");
       } else {
