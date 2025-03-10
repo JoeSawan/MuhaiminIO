@@ -4,7 +4,7 @@ bool stringComplete = false;
 int inputIndex = 0;
 
 // تعريف دبابيس PWM المتاحة
-const byte pwmPins[] = {3, 5, 6, 9, 10, 11};
+const byte pwmPins[] = { 3, 5, 6, 9, 10, 11 };
 const int pwmPinsCount = 6;
 
 void setup() {
@@ -12,10 +12,10 @@ void setup() {
 }
 
 void loop() {
-  receiveSerialData();   // استقبال البيانات في كل iteration
-  
+  receiveSerialData();  // استقبال البيانات في كل iteration
+
   if (stringComplete) {
-    processCommand();    // معالجة الأمر عند اكتماله
+    processCommand();  // معالجة الأمر عند اكتماله
     stringComplete = false;
   }
 }
@@ -24,14 +24,14 @@ void loop() {
 void receiveSerialData() {
   while (Serial.available() > 0) {
     char inChar = Serial.read();
-    
+
     if (inputIndex < BUFFER_SIZE - 1) {
       inputString[inputIndex++] = inChar;
-      
+
       if (inChar == '\n') {
-        inputString[inputIndex] = '\0'; // إنهاء السلسلة
+        inputString[inputIndex] = '\0';  // إنهاء السلسلة
         stringComplete = true;
-        inputIndex = 0;                 // إعادة المؤشر
+        inputIndex = 0;  // إعادة المؤشر
         return;
       }
     } else {
@@ -53,57 +53,53 @@ void processCommand() {
   }
 
   switch (commandID) {
-    case 1: // قراءة أنالوج
-      if (param1 >= 0 && param1 <= 5) {
+    case 1:  // قراءة أنالوج
+      if (param1 >= 0 && param1 <= 7) {
         ARPins(param1);
       } else {
-        Serial.println("ERROR 1: Invalid analog pin (0-5)");
+        Serial.println("ERROR 1: Invalid analog pin (0-7)");
       }
       break;
-
-    case 2: // قراءة دبوس رقمي
-      if (param1 >= 0 && param1 <= 19) { // دعم الدبابيس 0-13 + A0-A5
+    case 2:  // قراءة port
+      if (param1 >= 2 && param1 <= 4) {
         RPINx(param1);
       } else {
-        Serial.println("ERROR 2: Invalid digital pin (0-19)");
+        Serial.println("ERROR 2: Invalid port (2-4)");
       }
       break;
-
-    case 3: // قراءة منفذ
-      if (param1 >= 2 && param1 <= 4) {
-        RPORT(param1);
-      } else {
-        Serial.println("ERROR 3: Invalid port (2-4)");
-      }
-      break;
-
-    case 4: // كتابة منفذ
+    case 3:  // كتابة منفذ
       if ((param1 == 2 || param1 == 4) && param2 >= 0 && param2 <= 255) {
-        WPORTD(param1, param2);
+        WPORT(param1, param2);
+        Serial.println("OK 3");
+      } else {
+        Serial.println("ERROR 3: Invalid port(2,4) or value(0-255)");
+      }
+      break;
+    case 4:  // تعين منفذ
+      if ((param1 >= 2 && param1 <= 4) && param2 >= 0 && param2 <= 255) {
+        WDDRx(param1, param2);
         Serial.println("OK 4");
       } else {
-        Serial.println("ERROR 4: Invalid port(2,4) or value(0-255)");
+        Serial.println("ERROR 4: Invalid port(2-4) or value(0-255)");
       }
       break;
-
-    case 5: // قراءة DDR
-      if (param1 >= 2 && param1 <= 4) {
-        RDDRS(param1);
+    case 5:                               // قراءة دبوس رقمي
+      if (param1 >= 0 && param1 <= 21) {  // دعم الدبابيس 0-13 + A0-A7
+        RPINx(param1);
       } else {
-        Serial.println("ERROR 5: Invalid port (2-4)");
+        Serial.println("ERROR 5: Invalid digital pin (0-21)");
       }
       break;
-
-    case 6: // كتابة دبوس رقمي
-      if (param1 >= 0 && param1 <= 19 && (param2 == 0 || param2 == 1)) {
+    case 6:  // كتابة دبوس رقمي
+      if (param1 >= 0 && param1 <= 13 && (param2 == 0 || param2 == 1)) {
+        pinMode(param1, OUTPUT);
         digitalWrite(param1, param2);
         Serial.println("OK 6");
       } else {
-        Serial.println("ERROR 6: Invalid pin (0-19) or state (0/1)");
+        Serial.println("ERROR 6: Invalid pin (0-13) or state (0/1)");
       }
       break;
-
-    case 7: // PWM
+    case 7:  // PWM
       if (isPWMPin(param1) && param2 >= 0 && param2 <= 255) {
         analogWrite(param1, param2);
         Serial.println("OK 7");
@@ -116,7 +112,6 @@ void processCommand() {
       Serial.println("ERROR: Unknown command");
   }
 }
-
 // التحقق من دبوس PWM
 bool isPWMPin(int pin) {
   for (int i = 0; i < pwmPinsCount; i++) {
@@ -124,57 +119,45 @@ bool isPWMPin(int pin) {
   }
   return false;
 }
-
-// ========== دوال التنفيذ ========== 
+// ========== دوال التنفيذ ==========
 void ARPins(int pin) {
   Serial.print("1 ");
   Serial.print(pin);
   Serial.print(" ");
   Serial.println(analogRead(pin));
 }
-
-void RPINx(int pin) {
-  Serial.print("2 ");
-  Serial.print(pin);
-  Serial.print(" ");
-  Serial.println(digitalRead(pin));
-}
-
-void RPORT(int port) {
+void RPINx(int port) {
   byte value;
   switch (port) {
-    case 2: value = PORTB; break;
-    case 3: value = PORTC; break;
-    case 4: value = PORTD; break;
-  }
-  Serial.print("3 ");
-  Serial.print(port);
-  Serial.print(" ");
-  Serial.println(value);
-}
-
-void WPORTD(int port, int value) {
-  switch (port) {
-    case 2: 
-      DDRB = 0xFF; // ضبط جميع المنافذ كمخرجات
-      PORTB = value;
-      break;
-    case 4: 
-      DDRD = 0xFF;
-      PORTD = value;
-      break;
-  }
-}
-
-void RDDRS(int port) {
-  byte value;
-  switch (port) {
-    case 2: value = DDRB; break;
-    case 3: value = DDRC; break;
-    case 4: value = DDRD; break;
+    case 2: value = PINB; break;
+    case 3: value = PINC; break;
+    case 4: value = PIND; break;
   }
   Serial.print("5 ");
   Serial.print(port);
   Serial.print(" ");
   Serial.println(value);
+} 
+void WPORT(int port, int value) {
+  switch (port) {
+    case 2:
+      PORTB = value;
+      break;
+    case 4:
+      PORTD = value;
+      break;
+  }
+}
+void WDDRx(int port, int value) {
+  switch (port) {
+    case 2:
+      DDRB = value;
+      break;
+    case 3:
+      DDRC = value;
+      break;
+    case 4:
+      DDRD = value;
+      break;
+  }
 }
