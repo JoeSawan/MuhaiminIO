@@ -20,7 +20,8 @@ export class SerialManager {
         this.connectBtn.textContent = "الاتصال";
       }
     } catch (error) {
-      console.error("Connection error:", error);
+      console.error("خطأ في الاتصال:", error);
+      this.connectBtn.textContent = "الاتصال"; // إعادة الزر لحالته الأصلية
     }
   }
 }

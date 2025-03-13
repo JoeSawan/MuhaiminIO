@@ -11,7 +11,7 @@ export class PinComponent {
     div.innerHTML = `
       <div class="pin-id">${this.config.id}</div>
       <div class="controls">
-        ${this.getControlMarkup()}
+        ${this.getControlMarkup()}  
       </div>
       <div class="status-led ${this.config.value ? "active" : ""}"></div>
       <button class="mode-btn">${this.config.modes[this.config.mode]}</button>
@@ -23,7 +23,7 @@ export class PinComponent {
     switch (this.config.modes[this.config.mode]) {
       case "🌓":
         return '<input type="range" min="0" max="255">';
-      case "📊":
+      case "📈":
         return '<progress value="0" max="1024"></progress>';
       case "🔌":
         return '<label class="switch"><input type="checkbox"><div class="slider"></div></label>';

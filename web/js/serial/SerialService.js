@@ -5,7 +5,6 @@ export class SerialService {
     this.serialPort = null;
     this.reader = null;
     this.writer = null;
-    this.inputBuffer = "";
   }
 
   get isConnected() {
@@ -13,68 +12,43 @@ export class SerialService {
   }
 
   async connect() {
-    this.serialPort = await navigator.serial.requestPort();
-    await this.serialPort.open({ baudRate: 115200 });
-    this.setupListeners();
+    try {
+      this.serialPort = await navigator.serial.requestPort();
+      await this.serialPort.open({ baudRate: 115200 });
+      this.setupListeners();
+    } catch (error) {
+      console.error("فشل الاتصال:", error);
+      throw error; // لإظهار الخطأ في SerialManager
+    }
   }
 
   async disconnect() {
+    await this.serialPort.close();
     if (this.reader) await this.reader.cancel();
     if (this.writer) await this.writer.close();
+    if (this.serialPort) await this.serialPort.close();
     this.serialPort = null;
   }
-
-  setupListeners() {
-    // إضافة منطق استقبال البيانات هنا
-  }
-
-  setupListeners() {
-    this.reader = this.serialPort.readable.getReader();
-    this.writer = this.serialPort.writable.getWriter();
-
-    this.readLoop();
-  }
-
-  async readLoop() {
-    try {
-      while (true) {
-        const { value, done } = await this.reader.read();
-        if (done) break;
-
-        this.inputBuffer += this.decoder.decode(value);
-        this.processBuffer();
+  async setupListeners() {
+    while (this.serialPort.readable) {
+      this.reader = this.serialPort.readable.getReader();
+      try {
+        while (true) {
+          const { value, done } = await this.reader.read();
+          if (done) break;
+          console.log("البيانات المستلمة:", this.decoder.decode(value));
+        }
+      } catch (error) {
+        console.error("خطأ في القراءة:", error);
+      } finally {
+        this.reader.releaseLock();
       }
-    } catch (error) {
-      console.error("Reading error:", error);
     }
   }
-
-  processBuffer() {
-    const messages = this.inputBuffer.split("\n");
-    this.inputBuffer = messages.pop() || "";
-
-    messages.forEach((msg) => this.parseResponse(msg.trim()));
-  }
-
-  parseResponse(response) {
-    const pattern = /^1 (\d+) (\d+)$/;
-    const match = response.match(pattern);
-
-    if (match) {
-      const pinNumber = parseInt(match[1]);
-      const value = parseInt(match[2]);
-      const pinId = `A${pinNumber}`;
-
-      // إرسال الحدث لتحديث الواجهة
-      const event = new CustomEvent("analog-update", {
-        detail: { pinId, value },
-      });
-      document.dispatchEvent(event);
+  async sendData(data) {
+    if (!this.writer) {
+      this.writer = this.serialPort.writable.getWriter();
     }
-  }
-
-  async readAnalogPin(pinNumber) {
-    const command = `1 ${pinNumber}\n`;
-    await this.writer.write(this.encoder.encode(command));
+    await this.writer.write(this.encoder.encode(data));
   }
 }
