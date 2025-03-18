@@ -1,0 +1,10 @@
+C:\Users\joe5s\codes\Musaitir-IO\Serial Monitor\target\release\deps\libowned_ttf_parser-b3944cee87ccd413.rmeta: C:\Users\joe5s\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\owned_ttf_parser-0.25.0\src\lib.rs C:\Users\joe5s\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\owned_ttf_parser-0.25.0\src\convert.rs C:\Users\joe5s\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\owned_ttf_parser-0.25.0\src\owned.rs C:\Users\joe5s\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\owned_ttf_parser-0.25.0\src\preparse.rs
+
+C:\Users\joe5s\codes\Musaitir-IO\Serial Monitor\target\release\deps\libowned_ttf_parser-b3944cee87ccd413.rlib: C:\Users\joe5s\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\owned_ttf_parser-0.25.0\src\lib.rs C:\Users\joe5s\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\owned_ttf_parser-0.25.0\src\convert.rs C:\Users\joe5s\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\owned_ttf_parser-0.25.0\src\owned.rs C:\Users\joe5s\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\owned_ttf_parser-0.25.0\src\preparse.rs
+
+C:\Users\joe5s\codes\Musaitir-IO\Serial Monitor\target\release\deps\owned_ttf_parser-b3944cee87ccd413.d: C:\Users\joe5s\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\owned_ttf_parser-0.25.0\src\lib.rs C:\Users\joe5s\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\owned_ttf_parser-0.25.0\src\convert.rs C:\Users\joe5s\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\owned_ttf_parser-0.25.0\src\owned.rs C:\Users\joe5s\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\owned_ttf_parser-0.25.0\src\preparse.rs
+
+C:\Users\joe5s\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\owned_ttf_parser-0.25.0\src\lib.rs:
+C:\Users\joe5s\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\owned_ttf_parser-0.25.0\src\convert.rs:
+C:\Users\joe5s\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\owned_ttf_parser-0.25.0\src\owned.rs:
+C:\Users\joe5s\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\owned_ttf_parser-0.25.0\src\preparse.rs:
