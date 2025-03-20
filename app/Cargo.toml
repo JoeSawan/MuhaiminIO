@@ -1,0 +1,15 @@
+[package]
+name = "serial_port_app"
+version = "0.1.0"
+edition = "2021"
+authors = ["Mahmoud Al-Sawan <joe5sawan@gmail.com>"]
+description = "learn Rust"
+license = " "
+repository = "https://github.com/ "
+
+[dependencies]
+eframe = "0.31.1"
+egui = "0.31.1"
+serialport = "4.7.0"
+crossbeam-channel = "0.5.14"
+spin = "0.9.8"
