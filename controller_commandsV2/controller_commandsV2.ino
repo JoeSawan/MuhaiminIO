@@ -1,17 +1,34 @@
 #include <Arduino.h>
 
+// ------ ثوابت البروتوكول ------
 #define STX 0x02
 #define ETX 0x03
-#define OK 0x11
-#define BUFFER_SIZE 16
+#define BUFFER_SIZE 32
 #define MAX_PARAMS 2
 
+enum CommandCodes {
+  CMD_ANALOG_READ  = 0xAE, // A: Analog  E:read
+  CMD_PORT_WRITE   = 0xBF, // B: PORT F:Write
+  CMD_DDR_SET      = 0xDD, // D: DDR
+  CMD_PWM_WRITE    = 0xE4, // E: PWM
+  CMD_PIN_READ     = 0xFE  // F: PIN  E:read
+};
+
+// ------ أكواد الأخطاء ------
+enum ErrorCodes {
+  ERR_INVALID_CMD   = 0x01,
+  ERR_BAD_PARAM     = 0x02,
+  ERR_PIN_RANGE     = 0x03,
+  ERR_PORT_RANGE    = 0x04,
+  ERR_PWM_NOT_SUPP  = 0x05
+};
+
+// ------ المتغيرات العامة ------
 byte inputBuffer[BUFFER_SIZE];
 byte bufferIndex = 0;
 bool packetStarted = false;
 
-const byte pwmPins[] = { 3, 5, 6, 9, 10, 11 };
-const byte pwmPinsCount = 6;
+const byte pwmPins[] = {3, 5, 6, 9, 10, 11};
 
 void setup() {
   Serial.begin(115200);
@@ -21,173 +38,140 @@ void loop() {
   receivePacket();
 }
 
+// ------ نظام استقبال الحزم ------
 void receivePacket() {
   while (Serial.available() > 0) {
     byte inByte = Serial.read();
+    
     if (inByte == STX) {
       bufferIndex = 0;
       packetStarted = true;
-    } else if (inByte == ETX && packetStarted) {
-      if (bufferIndex > 0) {
-        processPacket(inputBuffer, bufferIndex);
-      }
+    } 
+    else if (inByte == ETX && packetStarted) {
+      processPacket(inputBuffer, bufferIndex);
       packetStarted = false;
-    } else if (packetStarted && bufferIndex < BUFFER_SIZE) {
+    } 
+    else if (packetStarted && bufferIndex < BUFFER_SIZE) {
       inputBuffer[bufferIndex++] = inByte;
     }
   }
 }
 
+// ------ نظام معالجة الأوامر ------
 void processPacket(byte* data, byte length) {
-  if (length < 2) {      // commandID + 1 param
-    sendError(0x01, 0);  // خطأ في البارامترات
+  if (length < 1) {
+    sendError(ERR_INVALID_CMD, 0x00);
     return;
-  }  // commandID + 1 param
-  byte commandID = data[0];
-  byte params[MAX_PARAMS] = { 0 };
-  for (byte i = 1; i < length && i - 1 < MAX_PARAMS; i++) {
-    params[i - 1] = data[i];
   }
-  switch (commandID) {
-    case 0x01:
-      handleAnalogRead(params[0]);
+
+  byte command = data[0];
+  byte params[MAX_PARAMS] = {0};
+  
+  for(byte i=1; i<length; i++){
+    if(i-1 < MAX_PARAMS) params[i-1] = data[i];
+  }
+
+  switch(command){
+    case CMD_ANALOG_READ:
+      if(length != 2) sendError(ERR_BAD_PARAM, command);
+      else handleAnalogRead(params[0]);
       break;
-    case 0x02:
-      handlePortRead(params[0]);
+      
+    case CMD_PORT_WRITE:
+      if(length != 3) sendError(ERR_BAD_PARAM, command);
+      else handlePortWrite(params[0], params[1]);
       break;
-    case 0x03:
-      handlePortWrite(params[0], params[1]);
+      
+    case CMD_DDR_SET:
+      if(length != 3) sendError(ERR_BAD_PARAM, command);
+      else handleDDRSet(params[0], params[1]);
       break;
-    case 0x04:
-      handlePortDirection(params[0], params[1]);
+      
+    case CMD_PWM_WRITE:
+      if(length != 3) sendError(ERR_BAD_PARAM, command);
+      else handlePWMWrite(params[0], params[1]);
       break;
-    case 0x05:
-      handleDigitalRead(params[0]);
+      
+    case CMD_PIN_READ:
+      if(length != 2) sendError(ERR_BAD_PARAM, command);
+      else handlePinRead(params[0]);
       break;
-    case 0x06:
-      handleDigitalWrite(params[0], params[1]);
-      break;
-    case 0x07:
-      handlePWMWrite(params[0], params[1]);
-      break;
-    case 0x08:
-      handlePinMode(params[0], params[1]);
-      break;
+      
     default:
-      sendError(0x00, commandID);
+      sendError(ERR_INVALID_CMD, command);
   }
 }
 
+// ------ معالجة الأوامر ------
 void handleAnalogRead(byte pin) {
-  if (pin <= 7) {
-    sendAnalogResponse(pin, analogRead(pin));
-  } else {
-    sendError(0x01, pin);
-  }
-}
-
-void handleDigitalWrite(byte pin, byte state) {
-  if (digitalPinToPort(pin) == NOT_A_PIN || (state != 0 && state != 1)) {
-    sendError(0x06, pin);
+  if(pin > A7) {
+    sendError(ERR_PIN_RANGE, pin);
     return;
   }
-  pinMode(pin, OUTPUT);
-  digitalWrite(pin, state);
-  sendAck(0x06);
-}
-
-void handlePortRead(byte port) {
-  byte value = 0;
-  switch (port) {
-    case 0x02: value = PINB; break;
-    case 0x03: value = PINC; break;
-    case 0x04: value = PIND; break;
-    default: sendError(0x02, port); return;
-  }
-  byte response[1] = { value };
-  sendPacket(response, 1);
+  int value = analogRead(pin);
+  byte response[] = {CMD_ANALOG_READ, pin, highByte(value), lowByte(value)};
+  sendPacket(response, sizeof(response));
 }
 
 void handlePortWrite(byte port, byte value) {
-  switch (port) {
-    case 0x02: PORTB = value; break;
-    case 0x03: PORTC = value; break;
-    case 0x04: PORTD = value; break;
-    default: sendError(0x03, port); return;
+  switch(port){
+    case 0xBB: PORTB = value; break;
+    case 0xCC: PORTC = value; break;
+    case 0xDD: PORTD = value; break;
   }
-  sendAck(0x03);
+  sendAck(CMD_PORT_WRITE);
 }
 
-void handlePortDirection(byte port, byte value) {
-  switch (port) {
-    case 0x02: DDRB = value; break;
-    case 0x03: DDRC = value; break;
-    case 0x04: DDRD = value; break;
-    default: sendError(0x04, port); return;
+void handleDDRSet(byte port, byte mode) {
+  switch(port){
+    case 0xBB: DDRB = mode; break;
+    case 0xCC: DDRC = mode; break;
+    case 0xDD: DDRD = mode; break;
   }
-  sendAck(0x04);
-}
-
-void handleDigitalRead(byte pin) {
-  if (digitalPinToPort(pin) == NOT_A_PIN) {
-    sendError(0x05, pin);
-    return;
-  }
-  byte response[2] = { 0x05, digitalRead(pin) };
-  sendPacket(response, 2);
+  sendAck(CMD_DDR_SET);
 }
 
 void handlePWMWrite(byte pin, byte value) {
-  if (!isPWMPin(pin)) {
-    sendError(0x07, pin);
+  bool valid = false;
+  for(byte p : pwmPins){
+    if(pin == p) {
+      valid = true;
+      break;
+    }
+  }
+  if(!valid){
+    sendError(ERR_PWM_NOT_SUPP, pin);
     return;
   }
   analogWrite(pin, value);
-  sendAck(0x07);
+  sendAck(CMD_PWM_WRITE);
 }
 
-void handlePinMode(byte pin, byte mode) {
-  if (digitalPinToPort(pin) == NOT_A_PIN || mode > 1) {
-    sendError(0x08, pin);
-    return;
+void handlePinRead(byte port) {
+  byte value;
+  switch(port){
+    case 0xBB: value = PINB; break;
+    case 0xCC: value = PINC; break;
+    case 0xDD: value = PIND; break;
   }
-  pinMode(pin, mode ? OUTPUT : INPUT);
-  sendAck(0x08);
+  byte response[] = {CMD_PIN_READ, port, value};
+  sendPacket(response, sizeof(response));
 }
 
+// ------ نظام الإرسال ------
 void sendPacket(byte* data, byte length) {
   Serial.write(STX);
   Serial.write(data, length);
   Serial.write(ETX);
-  Serial.flush();  // تأكد من إرسال جميع البيانات قبل الانتقال
+  Serial.flush();
 }
 
-void sendAnalogResponse(byte pin, int value) {
-  byte response[4] = { 0x01, pin, highByte(value), lowByte(value) };
-  sendPacket(response, 4);
+void sendAck(byte command) {
+  byte ack[] = {command, 0x01};
+  sendPacket(ack, sizeof(ack));
 }
 
-void sendAck(byte commandID) {
-  byte ack[1] = { commandID };  // تأكد من أن الرد يحتوي على 3 بايتات كاملة
-  sendPacket(ack, 1);
-}
-
-
-void sendError(byte errorCode, byte detail) {
-  byte error[2] = { 0x80 | errorCode, detail };
-  sendPacket(error, 2);
-}
-
-bool isPWMPin(byte pin) {
-  switch (pin) {
-    case 3:
-    case 5:
-    case 6:
-    case 9:
-    case 10:
-    case 11:
-      return true;
-    default:
-      return false;
-  }
+void sendError(byte errorCode, byte details) {
+  byte error[] = {0xEE, errorCode, details};
+  sendPacket(error, sizeof(error));
 }
