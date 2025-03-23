@@ -1,7 +1,19 @@
+use byteorder::{BigEndian, WriteBytesExt};
 use eframe::egui;
-use serialport::{DataBits, FlowControl, SerialPort};
+use serialport::{DataBits, FlowControl, SerialPort}; //use serialport::{self, SerialPort};
+use std::io::Write;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
+// ثوابت البروتوكول
+const STX: u8 = 0x02;
+const ETX: u8 = 0x03;
+
+// أكواد الأوامر
+const CMD_ANALOG_READ: u8 = 0xAE;
+const CMD_PORT_WRITE: u8 = 0xBF;
+const CMD_DDR_SET: u8 = 0xDD;
+const CMD_PWM_WRITE: u8 = 0xE4;
+const CMD_PIN_READ: u8 = 0xFE;
 
 #[derive(Default)]
 struct MCU {
@@ -123,27 +135,107 @@ impl App {
 
     fn disconnect(&mut self) {
         *self.serial_port.lock().unwrap() = None;
+        if let Some(thread) = self.reader_thread.take() {
+            thread.join().unwrap(); // انتظار انتهاء الثانوية
+        }
         self.connected = false;
     }
 
     fn connect(&mut self) {
         if let Some(port_name) = &self.selected_port {
             match serialport::new(port_name, 115_200)
-                .timeout(Duration::from_millis(1))
-                .data_bits(DataBits::Eight)
-                .flow_control(FlowControl::None)
+                .timeout(Duration::from_millis(100))
                 .open()
             {
                 Ok(port) => {
                     *self.serial_port.lock().unwrap() = Some(port);
                     self.connected = true;
+                    self.start_reader_thread(); // بدء ثانوية القراءة هنا
                 }
-                Err(e) => {
-                    let mut data = self.received_data.lock().unwrap();
-                    data.push_str(&format!("Connection error: {}\n", e));
-                }
+                Err(e) => eprintln!("Connection error: {}", e),
             }
         }
+    }
+    fn send_packet(&self, command: u8, params: &[u8]) -> Result<(), std::io::Error> {
+        let mut packet = vec![STX, command];
+        packet.extend_from_slice(params);
+        packet.push(ETX);
+        if let Some(port) = &mut *self.serial_port.lock().unwrap() {
+            port.write_all(&packet)?;
+        }
+        Ok(())
+    }
+
+    fn start_reader_thread(&mut self) {
+        let ctx = self.ctx.clone();
+        let serial_port = Arc::clone(&self.serial_port);
+        let data_tx = self.data_tx.clone();
+        let mcu = Arc::clone(&self.mcu);
+
+        self.reader_thread = Some(std::thread::spawn(move || {
+            let mut buffer = Vec::new();
+            loop {
+                // 1. قفل الـ Mutex وحفظ الـ Guard
+                let mut guard = match serial_port.lock() {
+                    Ok(g) => g,
+                    Err(_) => break,
+                };
+
+                // 2. استخراج المنفذ مع إبقاء الـ Guard نشطًا
+                let port = match guard.as_mut() {
+                    Some(p) => p,
+                    None => break,
+                };
+
+                // 3. قراءة البيانات
+                let mut byte = [0u8];
+                match port.read(&mut byte) {
+                    Ok(0) => continue,
+                    Ok(_) => {
+                        buffer.push(byte[0]);
+
+                        // معالجة الباكت...
+                        if let Some(etx_pos) = buffer.iter().position(|&b| b == ETX) {
+                            if let Some(stx_pos) = buffer[..etx_pos].iter().position(|&b| b == STX)
+                            {
+                                let packet = &buffer[stx_pos..=etx_pos];
+
+                                if packet.len() >= 3 {
+                                    let command = packet[1];
+                                    let params = &packet[2..packet.len() - 1];
+
+                                    let _ = data_tx
+                                        .send(format!("CMD: {:X} PARAMS: {:?}", command, params));
+
+                                    match command {
+                                        CMD_ANALOG_READ => {
+                                            if params.len() >= 2 {
+                                                let mut mcu_guard = mcu.lock().unwrap();
+                                                let pin = params[0] as usize;
+                                                let value =
+                                                    (params[1] as u16) << 8 | params[2] as u16;
+                                                mcu_guard.analog_pins[pin] = value;
+                                            }
+                                        }
+                                        CMD_PIN_READ => {
+                                            // معالجة قراءة المنفذ الرقمي
+                                        }
+                                        _ => {}
+                                    }
+                                }
+
+                                buffer.drain(..=etx_pos);
+                            }
+                        }
+                    }
+                    Err(_) => break,
+                }
+
+                // 4. تحرير الـ Guard قبل الانتظار
+                drop(guard); // مهم لإطلاق القفل
+                ctx.request_repaint();
+            }
+        }));
     }
 }
 
@@ -166,9 +258,15 @@ impl eframe::App for App {
                     .clicked()
                 {
                     self.running = !self.running;
+                    self.send_packet(CMD_ANALOG_READ, &[0x09]);
+                    self.start_reader_thread();
                 }
             });
+            if let Ok(data) = self.data_rx.try_recv() {
+                *self.received_data.lock().unwrap() = data;
+            }
 
+            ui.label(&*self.received_data.lock().unwrap());
             ui.horizontal(|ui| {
                 let combo_response = egui::ComboBox::from_label("Ports")
                     .selected_text(self.selected_port.as_deref().unwrap_or("Select port"))
@@ -208,6 +306,7 @@ impl eframe::App for App {
                 for pin in &mut self.pins {
                     ui.horizontal(|ui| {
                         ui.label(&pin.id);
+                        ui.label(if pin.pin > 0 { "1" } else { "0" });
                         match pin.mode {
                             PinMode::Input | PinMode::InputPullUp => {
                                 ui.label(if pin.value > 0 { "1" } else { "0" });
@@ -216,7 +315,10 @@ impl eframe::App for App {
                                 ui.add(egui::Slider::new(&mut pin.value, 0..=255).text("PWM"));
                             }
                             PinMode::AnalogInput => {
-                                ui.add(egui::ProgressBar::new(pin.value as f32 / 1023.0));
+                                ui.add(
+                                    egui::ProgressBar::new(pin.value as f32 / 1023.0)
+                                        .desired_width(200.0),
+                                );
                                 ui.label(pin.value.to_string());
                             }
                             PinMode::Output => {

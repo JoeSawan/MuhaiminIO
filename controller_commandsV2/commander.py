@@ -14,7 +14,7 @@ COMMANDS = {
     "PORT_WRITE": [0xBF, 0xBB, 0x3F],
     "DDR_SET": [0xDD, 0xBB, 0x3F],
     "PWM_WRITE": [0xE4, 0x09, 128],  # Set PWM on pin 9 to a medium value
-    "PIN_READ": [0xFE, 0xAA]  # Read all digital ports
+    "PIN_READ": [0xFE, 0xCC]  # Read all digital ports
 }
 
 def send_command(ser, command_name, command_data):
