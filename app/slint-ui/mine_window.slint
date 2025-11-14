@@ -1,0 +1,510 @@
+import {
+    Button,
+    VerticalBox,
+    HorizontalBox,
+    Switch,
+    Slider,
+    TextEdit,
+    ProgressIndicator,
+} from "std-widgets.slint";
+import "assets/DigitalNumbers-Regular.ttf";
+
+export global ColorTheme {
+    in property <color> primary_color: #1D1B42;
+    in property <color> secondary_color: #2969A4;
+    in property <color> neutral_color: #EFF4FF;
+}
+
+export component MySlider inherits Rectangle {
+    in-out property <float> maximum: 100;
+    in-out property <float> minimum: 0;
+    in-out property <float> value;
+    callback value-changed();
+    min-height: 8px;
+    min-width: 255px;
+    horizontal-stretch: 1;
+    vertical-stretch: 0;
+    border-radius: root.height / 2;
+    background: touch.pressed ? #eee : ColorTheme.neutral_color;
+    border-width: 1px;
+
+    // المستطيل الذي يعرض القيمة الحالية
+    Rectangle {
+        background: ColorTheme.secondary_color;
+        height: parent.height;
+        width: handle.x + (handle.width / 2);
+        border-radius: parent.border-radius;
+        x: 0;
+    }
+
+    handle := Rectangle {
+        width: self.height;
+        height: parent.height * 2.5;
+        border-width: 3px;
+        border-radius: self.height / 2;
+        background: touch.pressed ? ColorTheme.secondary_color : touch.has-hover ? ColorTheme.secondary_color : ColorTheme.primary_color;
+        x: (root.width - handle.width) * (root.value - root.minimum) / (root.maximum - root.minimum);
+    }
+
+    touch := TouchArea {
+        property <float> pressed-value;
+        pointer-event(event) => {
+            if (event.button == PointerEventButton.left && event.kind == PointerEventKind.down) {
+                self.pressed-value = root.value;
+            }
+        }
+        moved => {
+            if (self.enabled && self.pressed) {
+                root.value = max(root.minimum, min(root.maximum,
+                    self.pressed-value + (touch.mouse-x - touch.pressed-x) * (root.maximum - root.minimum) / (root.width - handle.width)));
+                root.value-changed();
+            }
+        }
+    }
+}
+
+// Connection panel component (dropdown + refresh + connect)
+export component ConnectionPanel inherits Rectangle {
+    in property <[string]> ports_list: [];
+    in property <string> selected_port: "";
+    callback refresh_ports();
+    callback connect_port(string);
+    min-height: 40px;
+    background: transparent;
+    HorizontalBox {
+        spacing: 6px;
+
+        // Dropdown simulation: a Text showing selected port and a button to open list
+        selected_display := Text {
+            text: root.selected_port == "" ? "Select port" : root.selected_port;
+            width: 160px;
+            vertical-alignment: center;
+            color: ColorTheme.primary_color;
+        }
+
+        Button {
+            text: "Refresh";
+            clicked => {
+                root.refresh_ports();
+            }
+        }
+
+        Button {
+            text: "Connect";
+            clicked => {
+                root.connect_port(root.selected_port);
+            }
+        }
+
+        // Ports list info (detailed port selection will be in modal dialog)
+        Text {
+            text: "Ports available: " + (root.ports_list.length > 0 ? "Yes" : "Loading...");
+            color: ColorTheme.neutral_color;
+            font-size: 12px;
+        }
+    }
+}
+
+// Footer that shows current connected port and disconnect button
+export component FooterBar inherits Rectangle {
+    in property <bool> connected: false;
+    in property <string> port_name: "";
+    callback disconnect();
+    min-height: 30px;
+    background: transparent;
+    HorizontalBox {
+        spacing: 8px;
+        Text {
+            text: root.connected ? ("Connected: " + root.port_name) : "Not connected";
+            color: ColorTheme.primary_color;
+            vertical-alignment: center;
+        }
+
+        Button {
+            visible: root.connected;
+            text: "Disconnect";
+            clicked => {
+                root.disconnect();
+            }
+        }
+    }
+}
+
+export component Pins inherits Rectangle {
+    //-----------style properties------------
+    property <length> paddingm: 4px;
+    property <length> spacing: 4px;
+    property <string> font-family: "Roboto, sans-serif";
+    property <length> font-size: 24px;
+    in-out property <float> border-opacity: 1.0;
+    property <float> pwm_max: Math.pow(2, root.pwm_bit) - 1;
+    property <float> adc_max: Math.pow(2, root.adc_bit) - 1;
+    in-out property <float> maximum: pwm_max;
+    in-out property <float> minimum: 0;
+    in-out property <float> value: 128;
+    out property <int> mods: 1;
+    //------------mcu properties------------
+    in property <int> pwm_bit:8;
+    // bits 0-255
+    in property <int> adc_bit:10; // bits 0-1023
+
+    //------------PINs properties------------
+    in property <int> pin:1; // Uid 
+    in property <bool> is-AnalogRead:false;
+    in property <bool> is-pwm:false;
+    in-out property <bool> is-high:true;
+    in property <int> analog: 1023;
+    out property <int> pwm: 128;
+    out property <bool> rstet;
+    callback toggle_pin(int, bool);
+    //width: 400px;
+    height: 50px;
+    background: transparent;
+
+    
+//rotation-angle:
+Rectangle {
+        background: white;
+        border-radius: 50px;
+        HorizontalBox {
+            spacing: 10px;
+            padding: 0px;
+            pin_label := Text {
+                overflow: TextOverflow.elide;
+                text: root.pin;
+                font-family: is-AnalogRead ? "Roboto" : "Digital Numbers";
+                width: 50px;
+                height: 50px;
+                horizontal-alignment: TextHorizontalAlignment.center;
+                color: ColorTheme.primary_color;
+                font-size: pin > 10 ? 30px : 36px;
+                font-weight: 400;
+                vertical-alignment: center;
+            }
+
+            mode_content_rect := Rectangle {
+                height: 90px;
+                min-width: 200px;
+                
+                // animation properties for mode change fade
+                property <float> mode_opacity: 1.0;
+                property <float> mode_target_opacity: 1.0;
+                property <int> pending_mods: root.mods;
+                property <bool> trigger_fade: false;
+                
+                // callback to handle fade trigger
+                callback do_fade();
+                do-fade => {
+                    if (!mode_timer.running) {
+                        mode_target_opacity = 0.0;
+                        mode_timer.running = true;
+                    }
+                }
+                
+                // fade timer for smooth mode transitions
+                mode_timer := Timer {
+                    interval: 16ms;
+                    running: false;
+                    triggered => {
+                        mode_opacity = mode_opacity + (mode_target_opacity - mode_opacity) * 0.3;
+                        if (Math.abs(mode_target_opacity - mode_opacity) < 0.01) {
+                            mode_opacity = mode_target_opacity;
+                            if (mode_target_opacity == 0.0) {
+                                // switch mode while invisible
+                                root.mods = pending_mods;
+                                mode_target_opacity = 1.0;
+                            } else {
+                                mode_timer.running = false;
+                            }
+                        }
+                    }
+                }
+
+                opacity: mode_opacity;        // حالات التبديل
+        if root.mods == 1: 
+       
+                VerticalBox {
+                    spacing: root.is-AnalogRead ? 10px : 0px;
+                    padding: 0px;
+                    HorizontalLayout {
+                        Rectangle { }
+
+                        Text {  //PWM
+                            y: 0px;
+                            text: "\{round(root.value)}";
+                            color: ColorTheme.secondary_color;
+                            height: 24px;
+                            font-size: 24px;
+                            font-family: "Digital Numbers";
+                            font-weight: 400;
+                            horizontal-alignment: TextHorizontalAlignment.center;
+                        }
+
+                        Rectangle { }
+                    }
+
+                    alignment: start;
+                    slider := MySlider {
+                        value: root.value;
+                        minimum: root.minimum;
+                        maximum: root.pwm_max;
+                        value-changed => {
+                            root.value = slider.value;
+                        }
+                    }
+                }
+                if root.mods == 2:
+                VerticalBox {
+                    y: 0px;
+                    padding: 0px;
+                    spacing: 0px;
+                    Text {
+                        color: ColorTheme.secondary_color;
+                        font-family: "Roboto";
+                        height: 28px;
+                        font-size: 24px;
+                        horizontal-alignment: center;
+                        text: root.analog;
+                    }
+
+                    Rectangle {
+                        width: 100%;
+                        height: 20px;
+                        background: ColorTheme.neutral_color;
+                        border-radius: 10px;
+                        Rectangle {
+                            width: parent.width * (root.analog / 1023.0);
+                            x: 1px;
+                            height: 18px;
+                            background: ColorTheme.secondary_color;
+                            border-radius: 9px;
+                        }
+                    }
+                }
+                if root.mods == 3: 
+                Rectangle {
+                    height: 36px;
+                    width: 72px;
+                    y: 7px;
+                    border-radius: self.height / 2;
+                    background: root.is-high ? ColorTheme.neutral_color : ColorTheme.secondary_color;
+                    // knob position animation (timer-driven).
+                    // Avoid binding knob_x to root.is-high so the knob doesn't jump on the first click.
+                    property <length> knob_x: 5px;
+                    property <length> knob_target: knob_x;
+
+                    // one-shot initializer to set the initial knob position according to root.is-high
+                    init_timer := Timer {
+                        interval: 1ms;
+                        running: true;
+                        triggered => {
+                            knob_x = root.is-high ? 5px : 40px;
+                            knob_target = knob_x;
+                            init_timer.running = false;
+                        }
+                    }
+
+                    knob_timer := Timer {
+                        interval: 16ms;
+                        running: false;
+                        triggered => {
+                            // interpolate towards target (simple easing)
+                            knob_x = knob_x + (knob_target - knob_x) * 0.25;
+                            if (Math.abs(knob_target - knob_x) < 0.5px) {
+                                knob_x = knob_target;
+                                knob_timer.running = false;
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        width: 28px;
+                        height: 28px;
+                        border-radius: self.height / 2;
+                        y: 4px;
+                        x: knob_x;
+                        background: root.is-high ? ColorTheme.secondary_color : ColorTheme.primary_color;
+                    }
+
+                    TouchArea {
+                        clicked => {
+                            // toggle state
+                            root.is-high = !root.is-high;
+                            // update animation target and start timer
+                            knob_target = root.is-high ? 5px : 40px;
+                            knob_timer.running = true;
+                        }
+                    }
+                }
+                if root.mods >= 4:
+                 Rectangle {
+                    height: 38px;
+                    width: 38px;
+                    y: 6px;
+                    border-radius: self.height / 2;
+                    background: root.is-high ? ColorTheme.neutral_color : ColorTheme.secondary_color;
+                }
+            }
+
+            TouchArea {
+                height: 50px;
+                width: 50px;
+                Rectangle {
+                    //visible: true;
+                    width: 44px;
+                    height: 44px;
+                    border-radius: self.width / 2;
+                    border-width: 5px;
+                    border-color: root.is-high ? ColorTheme.neutral_color : ColorTheme.secondary_color;
+                    background: transparent;
+                    opacity: root.mods == 1 ? root.value / root.pwm_max : (root.mods == 2 ? root.analog / root.adc_max : 1.0);
+                }
+
+                Rectangle {
+                    //overlay circle with full color at max value
+                    width: 44px;
+                    height: 44px;
+                    border-radius: self.width / 2;
+                    border-width: 5px;
+                    border-color: ColorTheme.secondary_color;
+                    background: transparent;
+                    opacity: root.mods == 1 ? root.value / root.pwm_max : (root.mods == 2 ? root.analog / root.adc_max : 0.0);
+                }
+
+                clicked => {
+                    // prepare animation: set target mode while invisible
+                    mode_content_rect.pending_mods = Math.mod(root.mods, 5) + 1;
+                    // call the fade callback
+                    mode_content_rect.do_fade();
+                }
+                if root.mods == 1:
+                Image {
+                    source: @image-url("assets/pwm.svg");
+                }
+                if root.mods == 2:Image {
+                    source: @image-url("assets/analog.svg");
+                    x: 12px;
+                    y: 5px;
+                }
+                if root.mods == 2:Image {
+                    source: @image-url("assets/Vector.svg");
+                    y: 30px;
+                }
+                if root.mods == 3:Image {
+                    source: @image-url("assets/output.svg");
+                }
+                if root.mods == 4:Image {
+                    source: @image-url("assets/input.svg");
+                }
+                if root.mods == 5:Image {
+                    source: @image-url("assets/input_pullup.svg");
+                }
+            }
+        }
+    }
+}
+
+export component MainWindow inherits Window {
+    width: 600px;
+    height: 600px;
+    background: ColorTheme.neutral_color;
+
+    // Callbacks to be implemented in Rust
+    callback connect(string);
+    callback disconnect();
+    callback list_ports();
+    callback send_pwm(int, int);
+    callback request_analog(int);
+
+    // Connection state provided by backend
+    in-out property <bool> connected: false;
+    in-out property <string> connected_port: "";
+    in-out property <[string]> available_ports: [];
+
+    // local UI state
+    property <bool> show_connection_dialog: false;
+    VerticalBox {
+        spacing: 6px;
+        padding: 6px;
+
+        // Top toolbar with Connect button (opens modal)
+        HorizontalBox {
+            spacing: 8px;
+            Button {
+                text: "Connect";
+                clicked => {
+                    root.show_connection_dialog = true;
+                    root.list_ports();
+                }
+            }
+        }
+
+        // Main content: pins area (placeholder)
+        Rectangle {
+            background: transparent;
+            VerticalBox {
+                spacing: 8px;
+                Pins {
+                    pin: 1;
+                    is-AnalogRead: true;
+                }
+            }
+        }
+
+        // Footer bar at bottom
+        FooterBar {
+            connected: root.connected;
+            port_name: root.connected_port;
+            disconnect => root.disconnect();
+        }
+    }
+
+    // Modal overlay for connection dialog
+    Rectangle {
+        visible: root.show_connection_dialog;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.45);
+        TouchArea {
+            width: 100%;
+            height: 100%;
+            clicked => {
+                root.show_connection_dialog = false;
+            }
+        }
+
+        // Centered dialog
+        Rectangle {
+            width: 420px;
+            height: 260px;
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            border-radius: 6px;
+            background: white;
+            VerticalBox {
+                width: 100%;
+                height: 100%;
+                padding: 12px;
+                conn := ConnectionPanel {
+                    ports_list: root.available_ports;
+                    selected_port: root.connected_port;
+                    refresh_ports => root.list_ports();
+                    connect_port => {
+                        root.connect(conn.selected_port);
+                        root.show_connection_dialog = false;
+                    }
+                }
+
+                HorizontalBox {
+                    spacing: 8px;
+                    Button {
+                        text: "Close";
+                        clicked => {
+                            root.show_connection_dialog = false;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
