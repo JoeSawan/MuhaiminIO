@@ -27,10 +27,51 @@ impl SerialManager {
     }
 
     pub fn open(&self, port_name: &str, baud_rate: u32) -> Result<(), String> {
-        let port = serialport::new(port_name, baud_rate)
+        // Debug: print the requested port name
+        println!("[serial] requested open port_name: {:?}", port_name);
+
+        // Guard against empty port names
+        if port_name.trim().is_empty() {
+            return Err("اسم المنفذ فارغ".to_string());
+        }
+        // On Windows, ports named COM10 and above must be opened using the "\\.\\COMn" path.
+        #[cfg(windows)]
+        let normalized_name = {
+            let up = port_name.to_uppercase();
+            if up.starts_with("COM") {
+                if let Ok(n) = up[3..].parse::<u32>() {
+                    if n >= 10 {
+                        println!("[serial] normalizing to \\.\\COMn style for {}", port_name);
+                        return match serialport::new(&format!("\\\\.\\{}", port_name), baud_rate)
+                            .timeout(Duration::from_millis(100))
+                            .open()
+                        {
+                            Ok(p) => {
+                                let mut port_lock = self.port.lock().unwrap();
+                                *port_lock = Some(p);
+
+                                // start read loop
+                                let port_clone = Arc::clone(&self.port);
+                                let tx_clone = self.tx.clone();
+                                thread::spawn(move || {
+                                    Self::read_loop(port_clone, tx_clone);
+                                });
+
+                                self.tx.send(IncomingEvent::Connected).ok();
+                                Ok(())
+                            }
+                            Err(e) => Err(e.to_string()),
+                        };
+                    }
+                }
+            }
+            port_name.to_string()
+        };
+
+        let port = serialport::new(&normalized_name, baud_rate)
             .timeout(Duration::from_millis(100))
             .open()
-            .map_err(|e| format!("فشل الاتصال: {}", e))?;
+            .map_err(|e| e.to_string())?;
 
         let mut port_lock = self.port.lock().unwrap();
         *port_lock = Some(port);

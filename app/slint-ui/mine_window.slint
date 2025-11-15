@@ -640,8 +640,23 @@ export component MainWindow inherits Window {
                     selected_port: root.connected_port;
                     refresh_ports => root.list_ports();
                     connect_port => {
-                        root.connect(conn.selected_port);
+                        // use typed entry if provided (see below), otherwise fallback to conn.selected_port
+                        root.connect(port_entry.text == "" ? conn.selected_port : port_entry.text);
                         root.show_connection_dialog = false;
+                    }
+                }
+                // Simple typed entry for basic testing: type a port (e.g. "COM7") and press Connect
+                HorizontalBox {
+                    spacing: 8px;
+                    Text {
+                        text: "Port:";
+                        color: ColorTheme.neutral_color;
+                        vertical-alignment: center;
+                    }
+
+                    port_entry := TextEdit {
+                        text: conn.selected_port;
+                        min-width: 220px;
                     }
                 }
 
