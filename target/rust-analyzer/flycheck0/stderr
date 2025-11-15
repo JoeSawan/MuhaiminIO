@@ -1,0 +1,108 @@
+   1.364161900s  INFO prepare_target{force=false package_id=quink_app v0.1.0 (C:\Users\joe22\codes\QUINK\app) target="quink_app"}: cargo::core::compiler::fingerprint: fingerprint error for quink_app v0.1.0 (C:\Users\joe22\codes\QUINK\app)/Check { test: false }/TargetInner { name: "quink_app", doc: true, ..: with_path("C:\\Users\\joe22\\codes\\QUINK\\app\\src\\main.rs", Edition2021) }
+   1.364753100s  INFO prepare_target{force=false package_id=quink_app v0.1.0 (C:\Users\joe22\codes\QUINK\app) target="quink_app"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\joe22\codes\QUINK\app\target\debug\.fingerprint\quink_app-b4180803a59e6d6d\bin-quink_app`
+
+Caused by:
+    The system cannot find the file specified. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_path
+   6: git_filter_source_path
+   7: git_filter_source_path
+   8: git_filter_source_path
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: <unknown>
+  15: <unknown>
+  16: git_midx_writer_dump
+  17: git_filter_source_repo
+  18: git_midx_writer_dump
+  19: BaseThreadInitThunk
+  20: RtlUserThreadStart
+   1.391214500s  INFO prepare_target{force=false package_id=quink_app v0.1.0 (C:\Users\joe22\codes\QUINK\app) target="build-script-build"}: cargo::core::compiler::fingerprint: fingerprint error for quink_app v0.1.0 (C:\Users\joe22\codes\QUINK\app)/RunCustomBuild/TargetInner { ..: custom_build_target("build-script-build", "C:\\Users\\joe22\\codes\\QUINK\\app\\build.rs", Edition2021) }
+   1.391258700s  INFO prepare_target{force=false package_id=quink_app v0.1.0 (C:\Users\joe22\codes\QUINK\app) target="build-script-build"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\joe22\codes\QUINK\app\target\debug\.fingerprint\quink_app-02a53a29bf235e7a\run-build-script-build-script-build`
+
+Caused by:
+    The system cannot find the file specified. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_path
+   6: git_filter_source_repo
+   7: git_filter_source_path
+   8: git_filter_source_path
+   9: git_filter_source_path
+  10: git_filter_source_path
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_filter_source_repo
+  16: <unknown>
+  17: <unknown>
+  18: git_midx_writer_dump
+  19: git_filter_source_repo
+  20: git_midx_writer_dump
+  21: BaseThreadInitThunk
+  22: RtlUserThreadStart
+   1.583977300s  INFO prepare_target{force=false package_id=quink_app v0.1.0 (C:\Users\joe22\codes\QUINK\app) target="quink_app"}: cargo::core::compiler::fingerprint: fingerprint error for quink_app v0.1.0 (C:\Users\joe22\codes\QUINK\app)/Check { test: true }/TargetInner { name: "quink_app", doc: true, ..: with_path("C:\\Users\\joe22\\codes\\QUINK\\app\\src\\main.rs", Edition2021) }
+   1.584026200s  INFO prepare_target{force=false package_id=quink_app v0.1.0 (C:\Users\joe22\codes\QUINK\app) target="quink_app"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\joe22\codes\QUINK\app\target\debug\.fingerprint\quink_app-2146110c422f65f6\test-bin-quink_app`
+
+Caused by:
+    The system cannot find the file specified. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_path
+   6: git_filter_source_path
+   7: git_filter_source_path
+   8: git_filter_source_path
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: <unknown>
+  15: <unknown>
+  16: git_midx_writer_dump
+  17: git_filter_source_repo
+  18: git_midx_writer_dump
+  19: BaseThreadInitThunk
+  20: RtlUserThreadStart
+   Compiling quink_app v0.1.0 (C:\Users\joe22\codes\QUINK\app)
+error: failed to run custom build command for `quink_app v0.1.0 (C:\Users\joe22\codes\QUINK\app)`
+note: To improve backtraces for build dependencies, set the CARGO_PROFILE_DEV_BUILD_OVERRIDE_DEBUG=true environment variable to enable debug information generation.
+
+Caused by:
+  process didn't exit successfully: `C:\Users\joe22\codes\QUINK\app\target\debug\build\quink_app-0ded68b65e9e35c1\build-script-build` (exit code: 101)
+  --- stderr
+  error: Could not load C:\Users\joe22\codes\QUINK\app\slint-ui\main_window.slint: The system cannot find the file specified. (os error 2)
+
+
+  thread 'main' panicked at build.rs:2:56:
+  called `Result::unwrap()` on an `Err` value: CompileError(["C:\\Users\\joe22\\codes\\QUINK\\app\\slint-ui\\main_window.slint:0: Could not load C:\\Users\\joe22\\codes\\QUINK\\app\\slint-ui\\main_window.slint: The system cannot find the file specified. (os error 2)"])
+  stack backtrace:
+     0: std::panicking::begin_panic_handler
+               at /rustc/05f9846f893b09a1be1fc8560e33fc3c815cfecb/library\std\src\panicking.rs:695
+     1: core::panicking::panic_fmt
+               at /rustc/05f9846f893b09a1be1fc8560e33fc3c815cfecb/library\core\src\panicking.rs:75
+     2: core::result::unwrap_failed
+               at /rustc/05f9846f893b09a1be1fc8560e33fc3c815cfecb/library\core\src\result.rs:1704
+     3: <usize as core::slice::index::SliceIndex<[T]>>::get_unchecked_mut::precondition_check
+     4: core::ops::function::FnOnce::call_once
+  note: Some details are omitted, run with `RUST_BACKTRACE=full` for a verbose backtrace.

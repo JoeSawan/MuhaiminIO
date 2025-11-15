@@ -2,7 +2,7 @@ import serial
 import time
 
 # Serial connection settings
-SERIAL_PORT = "COM9"  # Change this based on your device port
+SERIAL_PORT = "COM4"  # Change this based on your device port
 BAUD_RATE = 115200
 TIMEOUT = 1  # in seconds
 

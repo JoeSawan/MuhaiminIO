@@ -1,88 +1,46 @@
-# Musaitir IO - Arduino Controller
+# Quink 🚀
 
-![MohiminIO Banner](https://your-image-url.com/banner.png)
+**تحكم فوري واستعلام شامل لمتحكمات الأردوينو!**
 
-## 📌 Project Overview
-
-**Musaitir IO** is a fast and efficient system for executing commands sent from a computer to an **Arduino Uno** via a custom-designed interface. The name **"Musaitir IO"** is inspired by the Arabic word **"مُسيطر"** (meaning "controller" or "dominant") combined with **"IO"** representing Input/Output operations.
-
-This system enables **real-time pin monitoring**, **seamless control**, and **fast execution**, making it an ideal tool for embedded systems developers and Arduino enthusiasts.
+Quink هو مشروع مبتكر يسهل عملية التحكم والاستعلام عن متحكمات **Arduino** بطريقة سلسة وسريعة. يتيح لك التطبيق مراقبة حالة الدبابيس في الوقت الفعلي، والتحكم بها باستخدام أوامر تسلسلية بسيطة، مما يجعله أداة مثالية للمطورين والمهندسين الذين يبحثون عن حلول فعالة وسريعة لمشاريعهم. 🛠️
 
 ---
 
-## ✨ Features
+## ✨ المميزات
 
-✔️ **Real-time pin state reading** - Continuously monitors and reports the status of all Arduino pins.  
-✔️ **Easy pin control** - Quickly switch any pin mode via serial commands.  
-✔️ **Fast execution** - Optimized for minimal latency in command processing.  
-✔️ **Scalable and extensible** - Easily expandable and integrable into other projects.
-
----
-
-## 🚀 Getting Started
-
-### 🛠 Requirements
-
-To use this project, you will need:
-
-- An **Arduino Uno**
-- A **computer** with a serial communication interface
-- The **provided Arduino firmware** (`controller_commands.ino`)
-
-### 🔧 Installation
-
-1. **Clone the repository:**
-
-   ```sh
-   git clone https://github.com/JoeSawan/Musaitir-IO.git
-   ```
-
-2. **Open `controller_commands.ino` in the Arduino IDE**
-3. **Upload the firmware to your Arduino Uno**
-4. **Run the frontend application** to start sending commands
+✅ **مراقبة فورية** – يعرض حالة جميع دبابيس الأردوينو في الوقت الفعلي.  
+✅ **تحكم سلس** – تعديل وضع أي دبوس بسهولة عبر الأوامر التسلسلية.  
+✅ **أداء فائق** – مصمم للاستجابة السريعة والتنفيذ الفوري للأوامر.  
+✅ **قابلية التوسع** – يمكن دمجه بسهولة في مشاريع أخرى.  
+✅ **دعم متعدد الأنظمة** – يعمل على **Windows، macOS، Linux، Android، iOS**.  
+✅ **بروتوكول اتصال خاص** – يعتمد Qoink على بروتوكول مخصص لضمان دقة وسرعة الاستجابة.
 
 ---
 
-## 📜 License
+## 🔧 التقنية المستخدمة
 
-This project is **open-source** and available under the **MIT License**. Feel free to use, modify, and distribute it as needed.
-
----
-
-## 👥 Team
-
-| Name                 | Role                         | GitHub/Contact                                   |
-| -------------------- | ---------------------------- | ------------------------------------------------ |
-| **Mahmoud Al-Sawan** | Creator & Embedded Developer | [@JoeSawan](https://github.com/JoeSawan)         |
-| **Maha Al-Haweila**  | Frontend Developer           | [@mahaalhawila](https://github.com/mahaalhawila) |
-| **Aya Al-Ghadban**   | Backend Developer            | [@ayalghadban](https://github.com/ayalghadban)   |
+تم تطوير Quink باستخدام **لغة Rust**، مما يضمن أداءً عاليًا مع أمان واستقرار مثاليين، مما يجعله الخيار الأمثل لتطبيقات التحكم الفوري.
 
 ---
 
-## 🤝 How to Contribute
+## 🧐 أصل التسمية
 
-We welcome contributions from the community! Feel free to:
-
-🔹 **Submit issues and feature requests**  
-🔹 **Improve the existing codebase**  
-🔹 **Develop new features and optimizations**  
-🔹 **Enhance documentation**
-
-To contribute:
-
-1. **Fork the repository**
-2. **Create a new branch** (`feature-branch`)
-3. **Commit your changes**
-4. **Push to your fork**
-5. **Open a Pull Request**
+تم استلهام اسم **Quink** من دمج كلمتي **Quick** التي تعبر عن السرعة، و**Link** التي تعكس الربط والتواصل، مما يجسد جوهر المشروع في توفير **تحكم سريع وسلس** بمتحكمات الأردوينو. ⚡
 
 ---
 
-## 🌐 Links
+## 🚀 الاستخدامات المحتملة
 
-🔗 **GitHub Repository:** [Musaitir IO](https://github.com/JoeSawan/Musaitir-IO.git)  
-📘 **Documentation:** [Musaitir IO Docs](https://your-docs-url.com)
+🔹 أدوات **اختبار وتطوير سريع**.  
+🔹 تطبيقات **الأتمتة المنزلية**.  
+🔹 مشاريع **إنترنت الأشياء (IoT)**.  
+🔹 أنظمة **التحكم الصناعي**.  
+🔹 مشاريع **الروبوتات**.
 
 ---
 
-Made with ❤️ by the **Musaitir IO Team** 🚀
+## 📌 كيف تبدأ؟
+
+**🚧 قريبًا:** سيتم توفير **وثائق تفصيلية**، إلى جانب **مكتبات وأمثلة توضيحية** لتسهيل دمج Qoink في مشاريعك الخاصة! 🎯
+
+📢 **Quink - تحكم أسرع، استعلام شامل!**

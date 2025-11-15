@@ -1,6 +1,7 @@
 use crate::models::{IncomingEvent, OutgoingRequest};
 use crate::protocol::{decode_response, encode_request, FrameParser};
 use serialport::SerialPort;
+use std::io::Write;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -57,9 +58,24 @@ impl SerialManager {
         let packet = encode_request(req);
 
         let port_lock = self.port.lock().unwrap();
-        if port_lock.is_some() {
-            println!("إرسال: {:?}", packet);
-            Ok(())
+        if let Some(p) = port_lock.as_ref() {
+            // Attempt to write the packet to the serial port
+            // We need a mutable reference to the inner port to write; lock gives us ownership
+            drop(port_lock); // release the read-only borrow
+            let mut port_lock = self.port.lock().unwrap();
+            if let Some(p_mut) = port_lock.as_mut() {
+                match p_mut.write_all(&packet) {
+                    Ok(_) => {
+                        // flush if supported
+                        let _ = p_mut.flush();
+                        println!("إرسال: {:?}", packet);
+                        Ok(())
+                    }
+                    Err(e) => Err(format!("فشل الإرسال: {}", e)),
+                }
+            } else {
+                Err("المنفذ غير متصل".to_string())
+            }
         } else {
             Err("المنفذ غير متصل".to_string())
         }

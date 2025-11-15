@@ -1,164 +1,245 @@
 import serial
 import time
 from textwrap import dedent
+from datetime import datetime
+import csv
 
-# ------ Protocol Constants ------
-STX = 0x02
-ETX = 0x03
-CMD_ANALOG_READ = 0xAE
-CMD_PORT_WRITE = 0xBF
-CMD_DDR_SET = 0xDD
-CMD_PWM_WRITE = 0xE4
-CMD_PIN_READ = 0xFE
-
-ERR_INVALID_CMD = 0x01
-ERR_BAD_PARAM = 0x02
-ERR_PIN_RANGE = 0x03
-ERR_PORT_RANGE = 0x04
-ERR_PWM_NOT_SUPP = 0x05
-
-class ArduinoCommander:
+class AdvancedArduinoTester:
     def __init__(self, port, baudrate=115200):
         self.ser = serial.Serial(port, baudrate, timeout=1)
+        self.test_results = []
+        self.log_file = f"test_log_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        self._init_log_file()
         time.sleep(2)
-        
-    def __del__(self):
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
         self.ser.close()
+        self._generate_report()
 
-    def send_command(self, cmd, params=[]):
-        """إرسال أمر مع عرض البيانات الخام"""
-        packet = bytes([STX, cmd] + params + [ETX])
-        raw_sent = ' '.join(f'{b:02X}' for b in packet)
-        print(f"\n[TX] {raw_sent}")
-        
+    def _init_log_file(self):
+        with open(self.log_file, 'w', newline='', encoding='utf-8') as f:  # أضف encoding='utf-8'
+            writer = csv.writer(f)
+            writer.writerow([
+                'Timestamp', 
+                'Test Name', 
+                'Command', 
+                'Parameters',
+                'Response', 
+                'Status', 
+                'Details'
+            ])
+
+    def _log_test(self, test_data):
+        with open(self.log_file, 'a', newline='', encoding='utf-8') as f:  # أضف encoding='utf-8'
+            writer = csv.writer(f)
+            writer.writerow([
+                datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                test_data['name'],
+                test_data['cmd'],
+                ' '.join(f"{b:02X}" for b in test_data['params']),
+                ' '.join(f"{b:02X}" for b in test_data['response']) if test_data['response'] else 'None',
+                test_data['status'],
+                test_data['details']
+            ])
+
+    def send_packet(self, cmd, params=[]):
+        packet = bytes([0xEB, cmd] + params + [0xEE])
         self.ser.write(packet)
-        response = self._read_response()
-        
-        if response:
-            raw_recv = ' '.join(f'{b:02X}' for b in response)
-            print(f"[RX] {raw_recv}")
-        return response
+        return packet
 
-    def _read_response(self):
-        """قراءة الرد مع التعامل مع المهلة الزمنية"""
-        start_time = time.time()
-        response = bytearray()
+    def read_response(self, timeout=2):
+        start = time.time()
+        buffer = bytearray()
         
-        while time.time() - start_time < 2:  # مهلة 2 ثانية
+        while time.time() - start < timeout:
             b = self.ser.read(1)
             if not b:
                 continue
                 
-            if b[0] == STX:
-                response = bytearray()
-            elif b[0] == ETX:
-                return bytes(response)
+            if b[0] == 0xEB:
+                buffer = bytearray()
+            elif b[0] == 0xEE:
+                return bytes(buffer)
             else:
-                response.append(b[0])
-        
-        print("Timeout waiting for response!")
+                buffer.append(b[0])
+                
         return None
 
-    def _test_command(self, name, cases):
-        """دالة مساعدة لتنفيذ حالات اختبارية"""
-        print(f"\n{' ' + name + ' ':-^40}")
-        for desc, (cmd, params, expected) in cases.items():
-            print(f"\nTest: {desc}")
-            res = self.send_command(cmd, params)
-            
-            if not res:
-                print("No response received!")
-                continue
-                
-            if res[0] == 0xEE:  # في حالة الخطأ
-                if len(res) >= 3:
-                    print(f"Error: code={res[1]:02X}, details={res[2]:02X}")
-                else:
-                    print("Malformed error response")
-            else:
-                print("Success:", self._parse_response(res, cmd))
-
-    def _parse_response(self, res, cmd):
-        """تحليل الردود بناء على نوع الأمر"""
-        try:
-            if cmd == CMD_ANALOG_READ:
-                return f"Analog A{res[1]} = {(res[2] << 8) | res[3]}"
-            elif cmd == CMD_PIN_READ:
-                return f"PORT{res[1]} = 0x{res[2]:02X}"
-            return "Acknowledged"
-        except IndexError:
-            return "Malformed response"
-
-    def full_test_sequence(self):
-        """سلسلة اختبارات شاملة لجميع الأوامر"""
-        test_cases = {
-            # اختبارات القراءة
-            'Analog Read (Valid)': (
-                CMD_ANALOG_READ, 
-                [0x00], 
-                {'type': CMD_ANALOG_READ}
-            ),
-            'Analog Read (Invalid Pin)': (
-                CMD_ANALOG_READ, 
-                [0x08], 
-                {'error': ERR_PIN_RANGE}
-            ),
-            
-            # اختبارات المنافذ الرقمية
-            'DDR Set (Valid)': (
-                CMD_DDR_SET, 
-                [0xBB, 0xFF], 
-                {'type': CMD_DDR_SET}
-            ),
-            'Port Write (Valid)': (
-                CMD_PORT_WRITE, 
-                [0xBB, 0xAA], 
-                {'type': CMD_PORT_WRITE}
-            ),
-            'Pin Read (Valid)': (
-                CMD_PIN_READ, 
-                [0xCC], 
-                {'type': CMD_PIN_READ}
-            ),
-            
-            # اختبارات PWM
-            'PWM Write (Valid)': (
-                CMD_PWM_WRITE, 
-                [0x09, 0x80], 
-                {'type': CMD_PWM_WRITE}
-            ),
-            'PWM Write (Invalid Pin)': (
-                CMD_PWM_WRITE, 
-                [0x02, 0x80], 
-                {'error': ERR_PWM_NOT_SUPP}
-            ),
-            
-            # اختبارات الأخطاء
-            'Invalid Command': (
-                0xFF, 
-                [], 
-                {'error': ERR_INVALID_CMD}
-            ),
-            'Bad Parameters': (
-                CMD_ANALOG_READ, 
-                [0x00, 0x00], 
-                {'error': ERR_BAD_PARAM}
-            )
-        }
+    def run_comprehensive_test(self):
+        """تشغيل جميع الاختبارات التالية"""
+        tests = [
+            self.test_analog_read,
+            self.test_digital_operations,
+            self.test_pwm_operations,
+            self.test_error_conditions,
+            #self.test_stress
+        ]
         
-        for case_name, (cmd, params, expected) in test_cases.items():
-            self._test_command(case_name, {
-                case_name: (cmd, params, expected)
-            })
+        for test in tests:
+            test()
+
+    # region Test Cases
+    def test_analog_read(self):
+        test_cases = [
+            ('A0 Read', 0xAE, [0x00], lambda r: len(r) == 4 and r[0] == 0xAE),
+            ('All Pins Read', 0xAE, [0xAA], lambda r: len(r) == 17 and r[0] == 0xAE),
+            ('Invalid Pin High', 0xAE, [0x08], lambda r: r[0] == 0xE3),
+            ('Invalid Pin Low', 0xAE, [0xF0], lambda r: r[0] == 0xE3),
+            ('Boundary Check', 0xAE, [0x07], lambda r: len(r) == 4)
+        ]
+        self._run_test_suite("Analog Read Tests", test_cases)
+
+    def test_digital_operations(self):
+        test_cases = [
+            ('Set DDRB', 0xDD, [0xBB, 0xFF], lambda r: r[0] == 0xDD and r[1] == 0xBB),
+            ('Set Invalid DDR', 0xDD, [0x00, 0xFF], lambda r: r[0] == 0xE4),
+            ('Write PORTB', 0xBF, [0xBB, 0xAA], lambda r: r[0] == 0xBF and r[1] == 0xBB),
+            ('Read PORTB', 0xFE, [0xBB], lambda r: r[0] == 0xFE and r[1] == 0xBB),
+            ('Invalid Port Write', 0xBF, [0x00, 0xFF], lambda r: r[0] == 0xE4)
+        ]
+        self._run_test_suite("Digital Operations Tests", test_cases)
+
+    def test_pwm_operations(self):
+        test_cases = [
+            ('Valid PWM 9', 0xE4, [0x09, 0x80], lambda r: r[0] == 0xE4 and r[1] == 0x09),
+            ('Min PWM Value', 0xE4, [0x09, 0x00], lambda r: r[0] == 0xE4 and r[2] == 0x00),
+            ('Max PWM Value', 0xE4, [0x09, 0xFF], lambda r: r[0] == 0xE4 and r[2] == 0xFF),
+            ('Invalid PWM Pin', 0xE4, [0x02, 0x80], lambda r: r[0] == 0xE5),
+            ('Unsupported PWM', 0xE4, [0x04, 0xFF], lambda r: r[0] == 0xE5)
+        ]
+        self._run_test_suite("PWM Tests", test_cases)
+
+    def test_error_conditions(self):
+        test_cases = [
+            ('Unknown Command', 0xFF, [], lambda r: r[0] == 0xE1),
+            ('Short Packet', 0xAE, [], lambda r: r[0] == 0xE2),
+            ('Extra Parameters', 0xAE, [0x00, 0x00], lambda r: r[0] == 0xE2),
+            ('Buffer Overflow', 'special', [0xAE]*30, lambda r: r[0] == 0xE6)
+        ]
+        self._run_test_suite("Error Handling Tests", test_cases)
+
+    def test_stress(self):
+        print("\n=== Stress Tests ===")
+        for i in range(100):
+            self._run_test(
+                f"Stress Write {i+1}", 
+                0xBF, 
+                [0xBB, i % 256],
+                lambda r: r[0] == 0xBF and r[1] == 0xBB
+            )
+        for i in range(50):
+            self._run_test(
+                f"Stress Read {i+1}", 
+                0xFE, 
+                [0xBB],
+                lambda r: r[0] == 0xFE and r[1] == 0xBB
+            )
+    # endregion
+
+    # region Helper Functions
+    def _run_test_suite(self, suite_name, test_cases):
+        print(f"\n=== {suite_name} ===")
+        for case in test_cases:
+            self._run_test(*case)
+
+    def _run_test(self, name, cmd, params, validator):
+        # معالجة الحالات الخاصة
+        if cmd == 'special':  # Buffer Overflow
+            overflow_packet = bytes([0xEB] + [0xAE]*30 + [0xEE])
+            self.ser.write(overflow_packet)
+            response = self.read_response()
+            cmd_code = '0xAE*30'
+        else:
+            packet = self.send_packet(cmd, params)
+            response = self.read_response()
+            cmd_code = f"{cmd:02X}"
+
+        test_data = {
+            'name': name,
+            'cmd': cmd_code,
+            'params': params,
+            'response': response,
+            'status': 'PENDING',
+            'details': ''
+        }
+
+        try:
+            if not response:
+                test_data.update({'status': 'FAIL', 'details': 'No response'})
+            elif validator(response):
+                test_data.update({'status': 'PASS', 'details': self._format_response(response)})
+            else:
+                test_data.update({'status': 'FAIL', 'details': 'Validation failed'})
+        except Exception as e:
+            test_data.update({'status': 'ERROR', 'details': str(e)})
+
+        self._log_test(test_data)
+        self._print_test_result(test_data)
+
+    def _format_response(self, data):
+        if data[0] in ERROR_CODES:
+            return f"Error: {ERROR_CODES[data[0]]} (0x{data[0]:02X})"
+        
+        formatters = {
+            0xAE: self._format_analog,
+            0xBF: self._format_port,
+            0xDD: self._format_ddr,
+            0xE4: self._format_pwm,
+            0xFE: self._format_pin_read
+        }
+        return formatters.get(data[0], lambda x: 'Unknown response')(data)
+
+    def _format_analog(self, data):
+        if len(data) == 17:
+            values = [((data[i*2+1] << 8) | data[i*2+2]) for i in range(8)]
+            return f"Analog Values: {', '.join(f'{v:4d}' for v in values)}"
+        return f"A{data[1]}: {(data[2] << 8) | data[3]:4d}"
+
+
+    def _format_ddr(self, data):
+        return f"DDR{data[1]:02X} <- 0x{data[2]:02X}"
+
+    def _format_port(self, data):
+        return f"PORT{data[1]:02X} <- 0x{data[2]:02X}"
+
+    def _format_pwm(self, data):
+        return f"PWM Pin {data[1]} = {data[2]}"
+
+    def _format_pin_read(self, data):
+        return f"PORT{data[1]:02X} = {data[2]:08b}b"
+
+    def _print_test_result(self, test_data):
+        color_map = {'PASS': '32', 'FAIL': '31', 'ERROR': '33'}
+        color = color_map.get(test_data['status'], '37')
+        print(f"\033[1;{color}m[{test_data['status']}]\033[0m {test_data['name']}")
+        print(f"   Details: {test_data['details']}")
+
+    def _generate_report(self):
+        print("\n=== Final Test Report ===")
+        with open(self.log_file, 'r') as f:
+            reader = csv.reader(f)
+            for row in reader:
+                print(f"{row[1]:<25} {row[5]:<6} {row[6]}")
+    # endregion
+
+# تعريف أكواد الأخطاء
+ERROR_CODES = {
+    0xE1: "Invalid Command",
+    0xE2: "Bad Parameters",
+    0xE3: "Pin Out of Range",
+    0xE4: "Port Range Error",
+    0xE5: "PWM Not Supported",
+    0xE6: "Buffer Overflow"
+}
 
 if __name__ == "__main__":
-    comm = ArduinoCommander('COM9')
-    
-    print(dedent("""
-    *******************************
-    * Arduino Communication Tester *
-    *******************************
-    """))
-    
-    comm.full_test_sequence()
-    print("\nAll tests completed successfully!")
+    with AdvancedArduinoTester('COM4') as tester:
+        print(dedent("""
+        ******************************
+        * Advanced Arduino Tester *
+        ******************************
+        """))
+        tester.run_comprehensive_test()

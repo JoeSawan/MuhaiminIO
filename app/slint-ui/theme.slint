@@ -1,0 +1,185 @@
+// نظام الألوان والتصميم الموحد - Visual Identity System
+
+// ====================================
+// Global Color Theme (الهوية البصرية)
+// ====================================
+export global ColorTheme {
+    // الألوان الأساسية
+    in property <color> primary_color: #1D1B42;        // الأرجواني الداكن
+    in property <color> secondary_color: #2969A4;      // الأزرق
+    in property <color> accent_color: #00D4FF;         // السماوي (الأكسنت)
+    in property <color> neutral_color: #EFF4FF;        // الأبيض الفاتح
+    
+    // درجات الألوان
+    in property <color> light_gray: #F5F7FA;
+    in property <color> medium_gray: #B8BEC6;
+    in property <color> dark_gray: #5A6370;
+    
+    // الألوان الحالات (States)
+    in property <color> success_color: #10B981;        // أخضر
+    in property <color> warning_color: #F59E0B;        // برتقالي
+    in property <color> error_color: #EF4444;          // أحمر
+    in property <color> info_color: #0EA5E9;           // أزرق فاتح
+    
+    // الخلفيات
+    in property <color> background: #FFFFFF;
+    in property <color> surface: #F9FAFB;
+    in property <color> surface_hover: #F3F4F6;
+    in property <color> border_color: #E5E7EB;
+}
+
+// ====================================
+// Typography Constants
+// ====================================
+export global Typography {
+    in property <length> heading1_size: 32px;
+    in property <length> heading2_size: 24px;
+    in property <length> heading3_size: 20px;
+    in property <length> body_size: 14px;
+    in property <length> small_size: 12px;
+    in property <string> font_family: "Roboto, Arial, sans-serif";
+    in property <string> mono_family: "Monaco, 'Courier New', monospace";
+}
+
+// ====================================
+// Spacing Constants
+// ====================================
+export global Spacing {
+    in property <length> xs: 4px;
+    in property <length> sm: 8px;
+    in property <length> md: 16px;
+    in property <length> lg: 24px;
+    in property <length> xl: 32px;
+    in property <length> xxl: 48px;
+}
+
+// ====================================
+// Border Radius Constants
+// ====================================
+export global BorderRadius {
+    in property <length> none: 0px;
+    in property <length> sm: 4px;
+    in property <length> md: 8px;
+    in property <length> lg: 12px;
+    in property <length> full: 9999px;
+}
+
+// ====================================
+// Styled Button Component
+// ====================================
+export component StyledButton inherits Rectangle {
+    in property <string> text: "Button";
+    in property <string> variant: "primary"; // primary, secondary, success, warning, error, ghost
+    in property <bool> disabled: false;
+    callback clicked();
+    min-height: 40px;
+    min-width: 100px;
+    border-radius: BorderRadius.md;
+    border-width: 1px;
+    
+    // تحديد الألوان حسب variant
+    background: root.disabled ? ColorTheme.light_gray : root.variant == "primary" ? ColorTheme.primary_color : root.variant == "secondary" ? ColorTheme.secondary_color : root.variant == "success" ? ColorTheme.success_color : root.variant == "warning" ? ColorTheme.warning_color : root.variant == "error" ? ColorTheme.error_color : root.variant == "ghost" ? ColorTheme.surface : ColorTheme.primary_color;
+    border-color: root.disabled ? ColorTheme.border_color : root.variant == "ghost" ? ColorTheme.border_color : transparent;
+    text_color := Text {
+        text: root.text;
+        color: root.variant == "ghost" ? ColorTheme.primary_color : ColorTheme.neutral_color;
+        font-size: Typography.body_size;
+        font-family: Typography.font_family;
+        font-weight: 500;
+        horizontal-alignment: TextHorizontalAlignment.center;
+        vertical-alignment: TextVerticalAlignment.center;
+    }
+
+    touch_area := TouchArea {
+        clicked => root.clicked();
+    }
+}
+
+// ====================================
+// Styled Card Component
+// ====================================
+export component StyledCard inherits Rectangle {
+    in property <bool> elevated: false;
+    min-height: 100px;
+    min-width: 200px;
+    background: ColorTheme.background;
+    border-radius: BorderRadius.lg;
+    border-width: 1px;
+    border-color: ColorTheme.border_color;
+}
+
+// ====================================
+// Styled Label Component
+// ====================================
+export component StyledLabel inherits Text {
+    in property <string> label_text: "Label";
+    in property <string> size: "body"; // heading1, heading2, heading3, body, small
+    in property <string> weight: "normal"; // normal, bold
+    
+    text: root.label_text;
+    color: ColorTheme.primary_color;
+    font-family: Typography.font_family;
+    font-size: root.size == "heading1" ? Typography.heading1_size : root.size == "heading2" ? Typography.heading2_size : root.size == "heading3" ? Typography.heading3_size : root.size == "small" ? Typography.small_size : Typography.body_size;
+    font-weight: root.weight == "bold" ? 700 : 400;
+}
+
+// ====================================
+// Styled Badge Component
+// ====================================
+export component StyledBadge inherits Rectangle {
+    in property <string> text: "Badge";
+    in property <string> variant: "primary"; // primary, secondary, success, warning, error, info
+    
+    min-height: 24px;
+    min-width: 60px;
+    border-radius: BorderRadius.full;
+    background: root.variant == "primary" ? ColorTheme.primary_color : root.variant == "secondary" ? ColorTheme.secondary_color : root.variant == "success" ? ColorTheme.success_color : root.variant == "warning" ? ColorTheme.warning_color : root.variant == "error" ? ColorTheme.error_color : root.variant == "info" ? ColorTheme.info_color : ColorTheme.primary_color;
+    badge_text := Text {
+        text: root.text;
+        color: ColorTheme.neutral_color;
+        font-size: Typography.small_size;
+        font-family: Typography.font_family;
+        font-weight: 600;
+        horizontal-alignment: TextHorizontalAlignment.center;
+        vertical-alignment: TextVerticalAlignment.center;
+    }
+}
+
+// ====================================
+// Styled Alert Component
+// ====================================
+export component StyledAlert inherits Rectangle {
+    in property <string> message: "رسالة تنبيهية";
+    in property <string> alert_type: "info"; // info, success, warning, error
+    
+    min-height: 50px;
+    min-width: 300px;
+    border-radius: BorderRadius.md;
+    border-width: 2px;
+    background: root.alert_type == "info" ? ColorTheme.info_color : root.alert_type == "success" ? ColorTheme.success_color : root.alert_type == "warning" ? ColorTheme.warning_color : root.alert_type == "error" ? ColorTheme.error_color : ColorTheme.info_color;
+    border-color: root.alert_type == "info" ? ColorTheme.info_color : root.alert_type == "success" ? ColorTheme.success_color : root.alert_type == "warning" ? ColorTheme.warning_color : root.alert_type == "error" ? ColorTheme.error_color : ColorTheme.info_color;
+    opacity: 0.9;
+    alert_text := Text {
+        text: root.message;
+        color: ColorTheme.neutral_color;
+        font-size: Typography.body_size;
+        font-family: Typography.font_family;
+        font-weight: 500;
+        horizontal-alignment: TextHorizontalAlignment.center;
+        vertical-alignment: TextVerticalAlignment.center;
+    }
+}
+
+// ====================================
+// Styled Container Component
+// ====================================
+export component StyledContainer inherits Rectangle {
+    in property <string> layout: "vertical"; // vertical, horizontal
+    
+    min-height: 200px;
+    min-width: 300px;
+    background: ColorTheme.surface;
+    border-radius: BorderRadius.lg;
+    border-width: 1px;
+    border-color: ColorTheme.border_color;
+}

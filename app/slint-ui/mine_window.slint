@@ -112,61 +112,95 @@ export component ConnectionPanel inherits Rectangle {
     }
 }
 
-// Footer that shows current connected port and disconnect button
-export component FooterBar inherits Rectangle {
+// Connection status bar - bottom of window
+export component StatusBar inherits Rectangle {
     in property <bool> connected: false;
     in property <string> port_name: "";
-    callback disconnect();
-    min-height: 30px;
-    background: transparent;
+    callback toggle_connection(string);
+    height: 60px;
+    background: ColorTheme.primary_color;
     HorizontalBox {
-        spacing: 8px;
+        spacing: 12px;
+        padding: 8px;
+        alignment: space-between;
+        
+        // ---- Port name display ----
         Text {
             text: root.connected ? ("Connected: " + root.port_name) : "Not connected";
-            color: ColorTheme.primary_color;
+            color: white;
+            font-size: 14px;
             vertical-alignment: center;
+            horizontal-stretch: 1;
         }
-
+        
+        // ---- Connect/Disconnect toggle button ----
         Button {
-            visible: root.connected;
-            text: "Disconnect";
+            text: root.connected ? "Disconnect" : "Connect";
+            width: 120px;
             clicked => {
-                root.disconnect();
+                root.toggle_connection(root.port_name);
             }
         }
     }
 }
 
 export component Pins inherits Rectangle {
-    //-----------style properties------------
+    // ========================================
+    // COMPONENT DIMENSIONS
+    // ========================================
+    height: 50px;
+    background: transparent;
+
+    // ========================================
+    // STYLE PROPERTIES
+    // ========================================
     property <length> paddingm: 4px;
     property <length> spacing: 4px;
     property <string> font-family: "Roboto, sans-serif";
     property <length> font-size: 24px;
     in-out property <float> border-opacity: 1.0;
+
+    // ========================================
+    // MICROCONTROLLER CONFIGURATION
+    // ========================================
+    in property <string> mcu: "uno";
+    in property <int> pwm_bit: 8;
+    in property <int> adc_bit: 10;
+
+    // ========================================
+    // PIN CAPABILITIES & CONFIGURATION
+    // ========================================
+    in property <int> UID: 1;
+    in property <int> pin: 1;
+    in property <bool> is-pwm: false;
+    in property <bool> is-AnalogRead: false;
+    in property <bool> is-output: false;
+
+    // ========================================
+    // PIN STATE PROPERTIES
+    // ========================================
+    in property <bool> input: false;               // Digital input state: true = HIGH, false = LOW
+    out property <bool> output: false;              // Digital output state: true = HIGH, false = LOW
+    in property <int> analog: 0;                    // Analog read value (0-1023)
+    out property <int> pwm: 0;                      // PWM output value
+    in-out property <int> mods: 4;                  // Current mode: 1=PWM, 2=Analog, 3=Output, 4=Input, 5=InputPullup
+
+    // ========================================
+    // COMPUTED PROPERTIES & CONSTANTS
+    // ========================================
     property <float> pwm_max: Math.pow(2, root.pwm_bit) - 1;
     property <float> adc_max: Math.pow(2, root.adc_bit) - 1;
     in-out property <float> maximum: pwm_max;
     in-out property <float> minimum: 0;
-    //------------mcu properties------------
-    in property <string> mcu:"uno"; // mcu type
-    in property <int> pwm_bit:8; // bits 0-255
-    in property <int> adc_bit:10; // bits 0-1023
 
-    //------------PINs properties------------
-    in property <int> UID:1; // Uid
-    in property <int> pin:1;
-    in property <bool> is-AnalogRead:false;
-    in property <bool> is-pwm:false;
-    in property <bool> is-output:false;
-    in property <bool> input:false; // true = HIGH | false = LOW
-    out property <bool> output: false; // true = HIGH | false = LOW
-    in property <int> analog: 0;
-    out property <int> pwm: 0;
-    in-out property <int> mods: 3; // 1: PWM, 2: Analog Read, 3: Digital Output, 4: Digital Input, 5: Input Pullup
-    //width: 400px;
-    height: 50px;
-    background: transparent;
+    // ========================================
+    // MODE DESCRIPTIONS (Reference)
+    // ========================================
+    // Mode 1: PWM (Pulse Width Modulation) - requires is-pwm
+    // Mode 2: Analog Read - requires is-AnalogRead
+    // Mode 3: Digital Output - requires is-output
+    // Mode 4: Digital Input - always available
+    // Mode 5: Input Pullup - always available
 
     
 //rotation-angle:
@@ -176,6 +210,10 @@ Rectangle {
         HorizontalBox {
             spacing: 10px;
             padding: 0px;
+            
+            // ========================================
+            // PIN LABEL DISPLAY
+            // ========================================
             pin_label := Text {
                 overflow: TextOverflow.elide;
                 text: root.pin;
@@ -189,17 +227,60 @@ Rectangle {
                 vertical-alignment: center;
             }
 
+            // ========================================
+            // MODE CONTENT & ANIMATION CONTAINER
+            // ========================================
             mode_content_rect := Rectangle {
                 height: 90px;
                 min-width: 200px;
                 
-                // animation properties for mode change fade
+                // ---- Animation Properties ----
                 property <float> mode_opacity: 1.0;
                 property <float> mode_target_opacity: 1.0;
                 property <int> pending_mods: root.mods;
-                property <bool> trigger_fade: false;
                 
-                // callback to handle fade trigger
+                // ---- Mode Support Checker ----
+                pure callback get-supported-mode(int) -> int;
+                get-supported-mode(mode) => {
+                    // Check the current mode and find the next available one
+                    // 1: PWM, 2: Analog Read, 3: Digital Output, 4: Digital Input, 5: Input Pullup
+                    if (mode == 1) {
+                        if (root.is-pwm) {
+                            return 1;
+                        }
+                        if (root.is-AnalogRead) {
+                            return 2;
+                        }
+                        if (root.is-output) {
+                            return 3;
+                        }
+                        return 4;
+                    }
+                    if (mode == 2) {
+                        if (root.is-AnalogRead) {
+                            return 2;
+                        }
+                        if (root.is-output) {
+                            return 3;
+                        }
+                        return 4;
+                    }
+                    if (mode == 3) {
+                        if (root.is-output) {
+                            return 3;
+                        }
+                        return 4;
+                    }
+                    if (mode == 4) {
+                        return 4;
+                    }
+                    if (mode == 5) {
+                        return 5;
+                    }
+                    return 4;
+                }
+                
+                // ---- Fade Trigger Callback ----
                 callback do_fade();
                 do-fade => {
                     if (!mode_timer.running) {
@@ -208,7 +289,7 @@ Rectangle {
                     }
                 }
                 
-                // fade timer for smooth mode transitions
+                // ---- Mode Transition Timer ----
                 mode_timer := Timer {
                     interval: 10ms;
                     running: false;
@@ -217,24 +298,8 @@ Rectangle {
                         if (Math.abs(mode_target_opacity - mode_opacity) < 0.01) {
                             mode_opacity = mode_target_opacity;
                             if (mode_target_opacity == 0.0) {
-                                // switch mode while invisible
-                                // If the target mode is Analog (2) but this pin doesn't support
-                                // analog reads, advance to the next mode instead of selecting 2.
-                                if (pending_mods == 2 && !root.is-AnalogRead) {
-                                    root.mods = Math.mod(pending_mods, 5) + 1;
-                                } else {
-                                    root.mods = pending_mods;
-                                }
-                                if (pending_mods == 1 && !root.is-pwm) {
-                                    root.mods = Math.mod(pending_mods, 5) + 1;
-                                } else {
-                                    root.mods = pending_mods;
-                                }
-                                if (pending_mods == 3 && !root.is-output) {
-                                    root.mods = Math.mod(pending_mods, 5) + 1;
-                                } else {
-                                    root.mods = pending_mods;
-                                }
+                                // Switch mode while invisible, auto-skip unsupported modes
+                                root.mods = mode_content_rect.get-supported-mode(pending_mods);
                                 mode_target_opacity = 1.0;
                             } else {
                                 mode_timer.running = false;
@@ -243,9 +308,12 @@ Rectangle {
                     }
                 }
 
-                opacity: mode_opacity;        // حالات التبديل
-        if root.mods == 1: // PWM
-       
+                opacity: mode_opacity;
+                
+                // ========================================
+                // MODE 1: PWM (Pulse Width Modulation)
+                // ========================================
+                if root.mods == 1:
                 VerticalBox {
                     spacing: root.is-AnalogRead ? 10px : 0px;
                     padding: 0px;
@@ -276,7 +344,11 @@ Rectangle {
                         }
                     }
                 }
-                if root.mods == 2: // Analog Read
+                
+                // ========================================
+                // MODE 2: Analog Read (ADC)
+                // ========================================
+                if root.mods == 2:
                     VerticalBox {
                     y: 0px;
                     padding: 0px;
@@ -304,13 +376,17 @@ Rectangle {
                         }
                     }
                 }
-                if root.mods == 3:  // Digital Output
+                
+                // ========================================
+                // MODE 3: Digital Output
+                // ========================================
+                if root.mods == 3:
                 Rectangle {
                     height: 36px;
                     width: 72px;
                     y: 7px;
                     border-radius: self.height / 2;
-                    background: root.output ? ColorTheme.neutral_color : ColorTheme.secondary_color;
+                    background: root.output ? ColorTheme.secondary_color : ColorTheme.neutral_color;
                     // knob position animation (timer-driven).
                     // Avoid binding knob_x to root.output so the knob doesn't jump on the first click.
                     property <length> knob_x: 5px;
@@ -321,7 +397,7 @@ Rectangle {
                         interval: 1ms;
                         running: true;
                         triggered => {
-                            knob_x = root.output ? 5px : 40px;
+                            knob_x = root.output ? 40px : 5px;
                             knob_target = knob_x;
                             init_timer.running = false;
                         }
@@ -346,7 +422,7 @@ Rectangle {
                         border-radius: self.height / 2;
                         y: 4px;
                         x: knob_x;
-                        background: root.output ? ColorTheme.secondary_color : ColorTheme.primary_color;
+                        background: root.output ? ColorTheme.primary_color : ColorTheme.secondary_color;
                     }
 
                     TouchArea {
@@ -354,12 +430,16 @@ Rectangle {
                             // toggle state
                             root.output = !root.output;
                             // update animation target and start timer
-                            knob_target = root.output ? 5px : 40px;
+                            knob_target = root.output ? 40px : 5px;
                             knob_timer.running = true;
                         }
                     }
                 }
-                if root.mods >= 4: // Digital Input / Input Pullup
+                
+                // ========================================
+                // MODE 4 & 5: Digital Input / Input Pullup
+                // ========================================
+                if root.mods >= 4:
                  Rectangle {
                     height: 38px;
                     width: 38px;
@@ -369,11 +449,15 @@ Rectangle {
                 }
             }
 
+            // ========================================
+            // MODE SELECTOR TOUCH AREA & ICONS
+            // ========================================
             TouchArea {
                 height: 50px;
                 width: 50px;
+                
+                // ---- Visual Feedback Backgrounds ----
                 Rectangle {
-                    //visible: true;
                     width: 44px;
                     height: 44px;
                     border-radius: self.width / 2;
@@ -384,7 +468,6 @@ Rectangle {
                 }
 
                 Rectangle {
-                    //overlay circle with full color at max pwm
                     width: 44px;
                     height: 44px;
                     border-radius: self.width / 2;
@@ -393,37 +476,42 @@ Rectangle {
                     background: transparent;
                     opacity: root.mods == 1 ? root.pwm / root.pwm_max : (root.mods == 2 ? root.analog / root.adc_max : 0.0);
                 }
-
+                
+                // ---- Mode Cycling Handler ----
                 clicked => {
-                    // prepare animation: set target mode while invisible
                     mode_content_rect.pending_mods = Math.mod(root.mods, 5) + 1;
-                    // call the fade callback
                     mode_content_rect.do_fade();
                 }
+                
+                // ---- Mode Icons ----
                 if root.mods == 1:
                 Image {
                     source: @image-url("assets/pwm.svg");
                 }
-                if root.mods == 2:Image {
+                if root.mods == 2:
+                Image {
                     source: @image-url("assets/arw.svg");
-                    // الزاوية بين -120 و +120 حسب قيمة analog
                     transform-rotation: (root.analog / root.adc_max) * 240deg - 120deg;
                     vertical-alignment: ImageVerticalAlignment.center;
                     vertical-tiling: ImageTiling.round;
                     x: 20px;
                     y: -6px;
                 }
-                if root.mods == 2:Image {
+                if root.mods == 2:
+                Image {
                     source: @image-url("assets/Vector.svg");
                     y: 30px;
                 }
-                if root.mods == 3:Image {
+                if root.mods == 3:
+                Image {
                     source: @image-url("assets/output.svg");
                 }
-                if root.mods == 4:Image {
+                if root.mods == 4:
+                Image {
                     source: @image-url("assets/input.svg");
                 }
-                if root.mods == 5:Image {
+                if root.mods == 5:
+                Image {
                     source: @image-url("assets/input_pullup.svg");
                 }
             }
@@ -451,17 +539,18 @@ export component MainWindow inherits Window {
     // local UI state
     property <bool> show_connection_dialog: false;
     VerticalBox {
-        spacing: 6px;
-        padding: 6px;
+        spacing: 0px;
+        padding: 0px;
 
-        // Top toolbar with Connect button (opens modal)
-        
-
-        // Main content: pins area (placeholder)
+        // ========================================
+        // MAIN CONTENT AREA
+        // ========================================
         Rectangle {
             background: transparent;
+            vertical-stretch: 1;
             VerticalBox {
                 spacing: 8px;
+                padding: 6px;
                 Pins {
                     pin: 1;
                     is-AnalogRead: true;
@@ -469,17 +558,20 @@ export component MainWindow inherits Window {
 
                 Pins {
                     pin: 2;
-                    is-AnalogRead: false;
+                    is-AnalogRead: true;
                 }
 
                 Pins {
                     pin: 3;
                     is-AnalogRead: false;
+                    is-output: true;
+                    is-pwm: true;
                 }
 
                 Pins {
                     pin: 4;
                     is-pwm: true;
+                    is-output: true;
                 }
 
                 Pins {
@@ -492,24 +584,22 @@ export component MainWindow inherits Window {
                     is-AnalogRead: true;
                     Rectangle {
                         min-width: 16px;
-                        min-height: 16px; /* @lsp:ignore-node */ }
+                        min-height: 16px;
+                    }
                 }
             }
         }
 
-        // Footer bar at bottom
-        FooterBar {
+        // ========================================
+        // STATUS BAR (FOOTER)
+        // ========================================
+        StatusBar {
             connected: root.connected;
             port_name: root.connected_port;
-            disconnect => root.disconnect();
-            Button {
-                height: 60px;
-                icon: @image-url("assets/QUINK.svg");
-                icon-size: 50px;
-                primary: false;
-                width: 80px;
-                //text: "Connect";
-                clicked => {
+            toggle_connection => {
+                if (root.connected) {
+                    root.disconnect();
+                } else {
                     root.show_connection_dialog = true;
                     root.list_ports();
                 }
@@ -517,7 +607,9 @@ export component MainWindow inherits Window {
         }
     }
 
-    // Modal overlay for connection dialog
+    // ========================================
+    // CONNECTION DIALOG (MODAL)
+    // ========================================
     Rectangle {
         visible: root.show_connection_dialog;
         width: 100%;
@@ -535,8 +627,8 @@ export component MainWindow inherits Window {
         Rectangle {
             width: 594px;
             height: 595px;
-            x: 3px;
-            y: 4px;
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
             border-radius: 6px;
             background: white;
             VerticalBox {

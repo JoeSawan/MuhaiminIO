@@ -1,0 +1,8 @@
+┌────────────┐              Serial/USB             ┌────────────────────┐
+│  Quink App │◄────────────(Protocol)────────────►│ Arduino Controller │
+└────────────┘                                     └────────────────────┘
+     ▲                                                  ▲
+     │                                                  │
+ UI (Slint)                                        الكود في Arduino
+     │                                                  │
+Rust Logic (commands, parsing)              تنفيذ الأوامر: PWM, I/O, قراءة
