@@ -1,0 +1,165 @@
+
+import { ColorTheme, Typography, Spacing, BorderRadius } from "theme.slint";
+import { VerticalBox } from "std-widgets.slint";
+
+export component Button inherits Rectangle {
+    in property <string> text: "";
+    in property <image> icon; //: @image-url("assets/input.svg");
+    in property <bool> enabled: true;
+    in property <bool> loading: false;
+    callback clicked;
+    height: 40px;
+    min-width: (root.text == "" && root.icon.width > 0) ? 40px : 120px;
+    border-radius: self.height / 2;
+    opacity: root.enabled ? 1.0 : 0.6;
+    background: root.enabled ? ColorTheme.primary_color : ColorTheme.medium_gray;
+    animate background {
+        duration: 200ms;
+        easing: ease-in-out;
+    }
+    states [
+        pressed when touch.pressed && root.enabled && !root.loading: {
+            background: ColorTheme.secondary_color;
+            y: 1px;
+        }
+        hover when touch.has-hover && root.enabled && !root.loading: {
+            background: ColorTheme.primary_color.darker(10%);
+        }
+        disabled when !root.enabled: {
+            background: ColorTheme.medium_gray;
+        }
+    ]
+    Rectangle {
+        width: 100%;
+        height: 100%;
+        HorizontalLayout {
+            width: 100%;
+            height: 100%;
+            alignment: LayoutAlignment.center; // توسيط أفقي
+            spacing: (root.text != "" && root.icon.width > 0) ? Spacing.sm : 0px;
+            padding-left: Spacing.md;
+            padding-right: Spacing.md;
+            if (root.icon.width > 0 && !root.loading): Image {
+                source: root.icon;
+                height: root.height * 0.6;
+                y: (parent.height - self.height) / 2;
+                vertical-alignment: center;
+                image-fit: ImageFit.contain;
+                image-rendering: ImageRendering.smooth;
+                colorize: root.enabled ? ColorTheme.neutral_color : ColorTheme.dark_gray;
+            }
+            if (root.text != "" && !root.loading): Text {
+                text: root.text;
+                color: root.enabled ? ColorTheme.neutral_color : ColorTheme.dark_gray;
+                font-family: Typography.font_family;
+                font-size: root.height * 0.6;
+                font-weight: 700;
+                vertical-alignment: center;
+            }
+            if (root.loading): Rectangle {
+                width: 20px;
+                height: root.height * 0.6;
+                y: (parent.height - self.height) / 2;
+                border-radius: 10px;
+                border-width: 2px;
+                border-color: root.enabled ? ColorTheme.neutral_color : ColorTheme.dark_gray;
+                /*animate spin {
+                    duration: 1s;
+                    iteration-count: infinite;
+                }
+                spin {
+                    rotate: 0deg => 360deg;
+                }*/
+            }
+        }
+    }
+
+    touch := TouchArea {
+        clicked => {
+            if (root.enabled && !root.loading) {
+                root.clicked();
+            }
+        }
+    }
+}
+
+export component ToggleSwitch {
+    in-out property <bool> checked: false;
+    width: 72px;
+    height: 36px;
+    in property <length> knob-size: 28px;
+    in property <length> knob-padding: 4px;
+    in property <length> knob-off-x: knob-padding;
+    in property <length> knob-on-x: self.width - knob-size - knob-padding;
+    Rectangle {
+        height: parent.height;
+        width: parent.width;
+        border-radius: self.height / 2;
+        background: root.checked ? ColorTheme.secondary_color : ColorTheme.neutral_color;
+        handle := Rectangle {
+            width: root.knob-size;
+            height: root.knob-size;
+            border-radius: self.height / 2;
+            y: root.knob-padding;
+            x: root.checked ? root.knob-on-x : root.knob-off-x;
+            animate x {
+                duration: 250ms;
+                easing: ease-in-out;
+            }
+            background: root.checked ? ColorTheme.primary_color : ColorTheme.primary_color;
+        }
+
+        touch := TouchArea {
+            clicked => {
+                root.checked = !root.checked;
+            }
+        }
+    }
+}
+
+export component Slider inherits Rectangle {
+    in-out property <float> maximum: 100;
+    in-out property <float> minimum: 0;
+    in-out property <float> value;
+    callback value-changed();
+    min-height: 8px;
+    min-width: 255px;
+    horizontal-stretch: 1;
+    vertical-stretch: 0;
+    border-radius: root.height / 2;
+    background: touch.pressed ? #eee : ColorTheme.neutral_color;
+    border-width: 1px;
+    Rectangle {
+        background: ColorTheme.secondary_color;
+        height: parent.height;
+        width: handle.x + (handle.width / 2);
+        border-radius: parent.border-radius;
+        x: 0;
+        opacity: root.value / root.maximum;
+    }
+
+    handle := Rectangle {
+        width: self.height;
+        height: parent.height * 2.5;
+        border-width: 3px;
+        border-radius: self.height / 2;
+        background: touch.pressed ? ColorTheme.secondary_color : touch.has-hover ? ColorTheme.secondary_color : ColorTheme.primary_color;
+        x: (root.width - handle.width) * (root.value - root.minimum) / (root.maximum - root.minimum);
+    }
+
+    touch := TouchArea {
+        property <float> pressed-value;
+        pointer-event(event) => {
+            if (event.button == PointerEventButton.left && event.kind == PointerEventKind.down) {
+                self.pressed-value = root.value;
+            }
+        }
+        moved => {
+            if (self.enabled && self.pressed) {
+                root.value = max(root.minimum, min(root.maximum,
+                    self.pressed-value + (touch.mouse-x - touch.pressed-x) * (root.maximum - root.minimum) / (root.width - handle.width)));
+                root.value-changed();
+            }
+        }
+    }
+}

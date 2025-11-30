@@ -1,0 +1,129 @@
+import {
+    Button,
+    LineEdit,
+    TextEdit,
+    VerticalBox,
+    HorizontalBox,
+    ComboBox,
+    GroupBox,
+} from "std-widgets.slint";
+
+export component AppWindow inherits Window {
+    title: "Rust Serial Monitor (Cross-Platform)";
+    width: 500px;
+    height: 600px;
+
+    // خصائص البيانات
+    in property <[string]> available-ports: []; // قائمة المنافذ المكتشفة
+    in property <[string]> baud-rates: ["9600", "19200", "38400", "57600", "115200"];
+    in-out property <string> selected-port;
+    in-out property <string> selected-baud: "9600";
+    in-out property <string> logs: "";
+    in-out property <string> connection-status: "Disconnected";
+
+    // دوال الاستدعاء (Callbacks)
+    callback connect-clicked();
+    callback disconnect-clicked();
+    callback refresh-ports(); // دالة لفحص المنافذ
+    callback send-data(string);
+    VerticalBox {
+        padding: 10px;
+        spacing: 10px;
+
+        // منطقة الإعدادات
+        GroupBox {
+            title: "Connection Settings";
+            VerticalBox {
+                spacing: 10px;
+                HorizontalBox {
+                    spacing: 5px;
+                    Text {
+                        text: "Port:";
+                        vertical-alignment: center;
+                        width: 40px;
+                    }
+                    
+                    // قائمة المنافذ المنسدلة
+                    ComboBox {
+                        model: root.available-ports;
+                        current-value <=> root.selected-port;
+                        width: 250px;
+                    }
+
+                    // زر تحديث القائمة
+                    Button {
+                        text: "🔄 Refresh";
+                        width: 80px;
+                        clicked => {
+                            root.refresh-ports();
+                        }
+                    }
+                }
+
+                HorizontalBox {
+                    spacing: 5px;
+                    Text {
+                        text: "Speed:";
+                        vertical-alignment: center;
+                        width: 40px;
+                    }
+                    
+                    // قائمة السرعة
+                    ComboBox {
+                        model: root.baud-rates;
+                        current-value <=> root.selected-baud;
+                        width: 150px;
+                    }
+
+                    // زر الاتصال
+                    Button {
+                        text: root.connection-status == "Connected" ? "Disconnect" : "Connect";
+                        primary: root.connection-status == "Disconnected";
+                        clicked => {
+                            if (root.connection-status == "Connected") {
+                                root.disconnect-clicked();
+                            } else {
+                                root.connect-clicked();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // شاشة العرض
+        TextEdit {
+            text: root.logs;
+            read-only: true;
+            font-size: 12px;
+            vertical-stretch: 1; // تأخذ المساحة المتبقية
+        }
+
+        // منطقة الإرسال
+        Button { }
+
+        HorizontalBox {
+            input := LineEdit {
+                placeholder-text: "Type command...";
+                accepted => {
+                    root.send-data(self.text);
+                    self.text = "";
+                }
+            }
+
+            Button {
+                text: "Send";
+                clicked => {
+                    root.send-data(input.text);
+                    input.text = "";
+                }
+            }
+        }
+        
+        // شريط الحالة
+        Text {
+            text: "Status: " + root.connection-status;
+            color: root.connection-status == "Connected" ? green : red;
+        }
+    }
+}

@@ -1,148 +1,13 @@
 import {
-    Button,
     VerticalBox,
     HorizontalBox,
-    Switch,
-    Slider,
-    TextEdit,
-    ProgressIndicator,
+    Button,
 } from "std-widgets.slint";
 import "assets/DigitalNumbers-Regular.ttf";
-import {
-    ColorTheme,
-    Typography,
-    Spacing,
-    BorderRadius,
-    StyledButton,
-    StyledCard,
-    StyledLabel,
-    StyledBadge,
-    StyledAlert,
-    StyledContainer,
-} from "theme.slint";
+import { ColorTheme } from "theme.slint";
+import { ToggleSwitch, Slider } from "components.slint";
 
-export component MySlider inherits Rectangle {
-    in-out property <float> maximum: 100;
-    in-out property <float> minimum: 0;
-    in-out property <float> pwm;
-    callback pwm-changed();
-    min-height: 8px;
-    min-width: 255px;
-    horizontal-stretch: 1;
-    vertical-stretch: 0;
-    border-radius: root.height / 2;
-    background: touch.pressed ? #eee : ColorTheme.neutral_color;
-    border-width: 1px;
 
-    // المستطيل الذي يعرض القيمة الحالية
-    Rectangle {
-        background: ColorTheme.secondary_color;
-        height: parent.height;
-        width: handle.x + (handle.width / 2);
-        border-radius: parent.border-radius;
-        x: 0;
-        opacity: root.pwm / root.maximum;
-    }
-
-    handle := Rectangle {
-        width: self.height;
-        height: parent.height * 2.5;
-        border-width: 3px;
-        border-radius: self.height / 2;
-        background: touch.pressed ? ColorTheme.secondary_color : touch.has-hover ? ColorTheme.secondary_color : ColorTheme.primary_color;
-        x: (root.width - handle.width) * (root.pwm - root.minimum) / (root.maximum - root.minimum);
-    }
-
-    touch := TouchArea {
-        property <float> pressed-pwm;
-        pointer-event(event) => {
-            if (event.button == PointerEventButton.left && event.kind == PointerEventKind.down) {
-                self.pressed-pwm = root.pwm;
-            }
-        }
-        moved => {
-            if (self.enabled && self.pressed) {
-                root.pwm = max(root.minimum, min(root.maximum,
-                    self.pressed-pwm + (touch.mouse-x - touch.pressed-x) * (root.maximum - root.minimum) / (root.width - handle.width)));
-                root.pwm-changed();
-            }
-        }
-    }
-}
-
-// Connection panel component (dropdown + refresh + connect)
-export component ConnectionPanel inherits Rectangle {
-    in property <[string]> ports_list: [];
-    in property <string> selected_port: "";
-    callback refresh_ports();
-    callback connect_port(string);
-    min-height: 40px;
-    background: transparent;
-    HorizontalBox {
-        spacing: 6px;
-
-        // Dropdown simulation: a Text showing selected port and a button to open list
-        selected_display := Text {
-            text: root.selected_port == "" ? "Select port" : root.selected_port;
-            width: 160px;
-            vertical-alignment: center;
-            color: ColorTheme.primary_color;
-        }
-
-        Button {
-            text: "Refresh";
-            clicked => {
-                root.refresh_ports();
-            }
-        }
-
-        Button {
-            text: "Connect";
-            clicked => {
-                root.connect_port(root.selected_port);
-            }
-        }
-
-        // Ports list info (detailed port selection will be in modal dialog)
-        Text {
-            text: "Ports available: " + (root.ports_list.length > 0 ? "Yes" : "Loading...");
-            color: ColorTheme.neutral_color;
-            font-size: 12px;
-        }
-    }
-}
-
-// Connection status bar - bottom of window
-export component StatusBar inherits Rectangle {
-    in property <bool> connected: false;
-    in property <string> port_name: "";
-    callback toggle_connection(string);
-    height: 60px;
-    background: ColorTheme.primary_color;
-    HorizontalBox {
-        spacing: 12px;
-        padding: 8px;
-        alignment: space-between;
-        
-        // ---- Port name display ----
-        Text {
-            text: root.connected ? ("Connected: " + root.port_name) : "Not connected";
-            color: white;
-            font-size: 14px;
-            vertical-alignment: center;
-            horizontal-stretch: 1;
-        }
-        
-        // ---- Connect/Disconnect toggle button ----
-        Button {
-            text: root.connected ? "Disconnect" : "Connect";
-            width: 120px;
-            clicked => {
-                root.toggle_connection(root.port_name);
-            }
-        }
-    }
-}
 
 export component Pins inherits Rectangle {
     // ========================================
@@ -174,14 +39,14 @@ export component Pins inherits Rectangle {
     in property <int> pin: 1;
     in property <bool> is-pwm: false;
     in property <bool> is-AnalogRead: false;
-    in property <bool> is-output: false;
+    in property <bool> is-output: true;
 
     // ========================================
     // PIN STATE PROPERTIES
     // ========================================
     in property <bool> input: false;               // Digital input state: true = HIGH, false = LOW
     out property <bool> output: false;              // Digital output state: true = HIGH, false = LOW
-    in property <int> analog: 0;                    // Analog read value (0-1023)
+    in property <int> analog: 512;                    // Analog read value (0-1023)
     out property <int> pwm: 0;                      // PWM output value
     in-out property <int> mods: 4;                  // Current mode: 1=PWM, 2=Analog, 3=Output, 4=Input, 5=InputPullup
 
@@ -202,9 +67,8 @@ export component Pins inherits Rectangle {
     // Mode 4: Digital Input - always available
     // Mode 5: Input Pullup - always available
 
-    
-//rotation-angle:
-Rectangle {
+    //rotation-angle:
+    Rectangle {
         background: white;
         border-radius: 50px;
         HorizontalBox {
@@ -335,12 +199,12 @@ Rectangle {
                     }
 
                     alignment: start;
-                    slider := MySlider {
-                        pwm: root.pwm;
+                    slider := Slider {
+                        value: root.pwm;
                         minimum: root.minimum;
                         maximum: root.pwm_max;
-                        pwm-changed => {
-                            root.pwm = slider.pwm;
+                        value-changed => {
+                            root.pwm = slider.value;
                         }
                     }
                 }
@@ -385,55 +249,7 @@ Rectangle {
                     height: 36px;
                     width: 72px;
                     y: 7px;
-                    border-radius: self.height / 2;
-                    background: root.output ? ColorTheme.secondary_color : ColorTheme.neutral_color;
-                    // knob position animation (timer-driven).
-                    // Avoid binding knob_x to root.output so the knob doesn't jump on the first click.
-                    property <length> knob_x: 5px;
-                    property <length> knob_target: knob_x;
-
-                    // one-shot initializer to set the initial knob position according to root.output
-                    init_timer := Timer {
-                        interval: 1ms;
-                        running: true;
-                        triggered => {
-                            knob_x = root.output ? 40px : 5px;
-                            knob_target = knob_x;
-                            init_timer.running = false;
-                        }
-                    }
-
-                    knob_timer := Timer {
-                        interval: 4ms;
-                        running: false;
-                        triggered => {
-                            // interpolate towards target (simple easing)
-                            knob_x = knob_x + (knob_target - knob_x) * 0.25;
-                            if (Math.abs(knob_target - knob_x) < 0.5px) {
-                                knob_x = knob_target;
-                                knob_timer.running = false;
-                            }
-                        }
-                    }
-
-                    Rectangle {
-                        width: 28px;
-                        height: 28px;
-                        border-radius: self.height / 2;
-                        y: 4px;
-                        x: knob_x;
-                        background: root.output ? ColorTheme.primary_color : ColorTheme.secondary_color;
-                    }
-
-                    TouchArea {
-                        clicked => {
-                            // toggle state
-                            root.output = !root.output;
-                            // update animation target and start timer
-                            knob_target = root.output ? 40px : 5px;
-                            knob_timer.running = true;
-                        }
-                    }
+                    ToggleSwitch { }
                 }
                 
                 // ========================================
@@ -519,155 +335,97 @@ Rectangle {
     }
 }
 
-export component MainWindow inherits Window {
-    width: 600px;
-    height: 600px;
+export component MCU inherits Rectangle {
+    in property <string> name:"unknown";
+    in property <int> pwm_bit: 8;
+    in property <int> adc_bit: 10;
+
+    // نموذج لخصائص كل Pin رقمية مثل Arduino Uno
+    // is_pwm: البنات 3,5,6,9,10,11 فقط
+    in property <[{
+        pin: int,
+        is_pwm: bool,
+        is_analog: bool,
+        is-output: bool,
+    }]> pins: [
+        { pin: 0, is-output:true, is_pwm: false, is_analog: false },
+        { pin: 1, is-output:true, is_pwm: false, is_analog: false },
+        { pin: 2, is-output:true, is_pwm: false, is_analog: false },
+        { pin: 3, is-output:true, is_pwm: true, is_analog: false },
+        { pin: 4, is-output:true, is_pwm: false, is_analog: false },
+        { pin: 5, is-output:true, is_pwm: true, is_analog: false },
+        { pin: 6, is-output:true, is_pwm: true, is_analog: false },
+        { pin: 7, is-output:true, is_pwm: false, is_analog: false },
+        { pin: 8, is-output:true, is_pwm: false, is_analog: false },
+        { pin: 9, is-output:true, is_pwm: true, is_analog: false },
+        { pin: 10, is-output:true, is_pwm: true, is_analog: false },
+        { pin: 11, is-output:true, is_pwm: true, is_analog: false },
+        { pin: 12, is-output:true, is_pwm: false, is_analog: false },
+        { pin: 13, is-output:true, is_pwm: false, is_analog: false },
+        { pin: 0, is-output:false, is_pwm: false, is_analog: true },
+        { pin: 1, is-output:false, is_pwm: false, is_analog: true },
+        { pin: 2, is-output:false, is_pwm: false, is_analog: true },
+        { pin: 3, is-output:false, is_pwm: false, is_analog: true },
+        { pin: 4, is-output:false, is_pwm: false, is_analog: true },
+        { pin: 5, is-output:false, is_pwm: false, is_analog: true },
+    ];
+    min-width: 400px;
+    min-height: 600px;
     background: ColorTheme.neutral_color;
-
-    // Callbacks to be implemented in Rust
-    callback connect(string);
-    callback disconnect();
-    callback list_ports();
-    callback send_pwm(int, int);
-    callback request_analog(int);
-
-    // Connection state provided by backend
-    in-out property <bool> connected: false;
-    in-out property <string> connected_port: "";
-    in-out property <[string]> available_ports: [];
-
-    // local UI state
-    property <bool> show_connection_dialog: false;
     VerticalBox {
         spacing: 0px;
         padding: 0px;
-
-        // ========================================
-        // MAIN CONTENT AREA
-        // ========================================
         Rectangle {
             background: transparent;
             vertical-stretch: 1;
             VerticalBox {
                 spacing: 8px;
                 padding: 6px;
-                Pins {
-                    pin: 1;
-                    is-AnalogRead: true;
+    // توليد 14 Pin رقمية تلقائيًا باستخدام for
+    for p in pins: Pins {
+        // index تلقائي من الـ model
+        UID: p.pin;
+                    pin: p.pin;
+                    is-pwm: p.is_pwm;
+                    is-AnalogRead: p.is_analog;
+                    pwm_bit: root.pwm_bit;
+                    adc_bit: root.adc_bit;
                 }
 
-                Pins {
-                    pin: 2;
-                    is-AnalogRead: true;
-                }
-
-                Pins {
-                    pin: 3;
-                    is-AnalogRead: false;
-                    is-output: true;
-                    is-pwm: true;
-                }
-
-                Pins {
-                    pin: 4;
-                    is-pwm: true;
-                    is-output: true;
-                }
-
-                Pins {
-                    pin: 5;
-                    is-AnalogRead: true;
-                }
-
-                Pins {
-                    pin: 6;
-                    is-AnalogRead: true;
-                    Rectangle {
-                        min-width: 16px;
-                        min-height: 16px;
-                    }
-                }
-            }
-        }
-
-        // ========================================
-        // STATUS BAR (FOOTER)
-        // ========================================
-        StatusBar {
-            connected: root.connected;
-            port_name: root.connected_port;
-            toggle_connection => {
-                if (root.connected) {
-                    root.disconnect();
-                } else {
-                    root.show_connection_dialog = true;
-                    root.list_ports();
-                }
-            }
+    // توليد البنات التماثلية A0..A5 تلقائيًا
+   
+}
         }
     }
+}
 
-    // ========================================
-    // CONNECTION DIALOG (MODAL)
-    // ========================================
-    Rectangle {
-        visible: root.show_connection_dialog;
-        width: 100%;
-        height: 100%;
-        background: rgba(0,0,0,0.45);
-        TouchArea {
-            width: 100%;
-            height: 100%;
-            clicked => {
-                root.show_connection_dialog = false;
-            }
-        }
+export component MainWindow inherits Window {
+    min-width: 400px;
+    min-height: 600px;
+    background: ColorTheme.neutral_color;
 
-        // Centered dialog
-        Rectangle {
-            width: 594px;
-            height: 595px;
-            x: (parent.width - self.width) / 2;
-            y: (parent.height - self.height) / 2;
-            border-radius: 6px;
-            background: white;
-            VerticalBox {
-                width: 100%;
-                height: 100%;
-                padding: 12px;
-                conn := ConnectionPanel {
-                    ports_list: root.available_ports;
-                    selected_port: root.connected_port;
-                    refresh_ports => root.list_ports();
-                    connect_port => {
-                        // use typed entry if provided (see below), otherwise fallback to conn.selected_port
-                        root.connect(port_entry.text == "" ? conn.selected_port : port_entry.text);
-                        root.show_connection_dialog = false;
-                    }
-                }
-                // Simple typed entry for basic testing: type a port (e.g. "COM7") and press Connect
-                HorizontalBox {
-                    spacing: 8px;
-                    Text {
-                        text: "Port:";
-                        color: ColorTheme.neutral_color;
-                        vertical-alignment: center;
-                    }
+    /* Connection state provided by backend
+    in-out property <bool> connected: false;
+    in-out property <string> connected_port: "";
+    in-out property <[string]> available_ports: [];
+    */
+    // local UI state
+    //  property <bool> show_connection_dialog: false;
+    VerticalBox {
+        MCU { }
 
-                    port_entry := TextEdit {
-                        text: conn.selected_port;
-                        min-width: 220px;
-                    }
+        HorizontalBox {
+            alignment: LayoutAlignment.space-around;
+            Rectangle {
+                background: ColorTheme.secondary_color;
+                max-height: 80px;
+                min-height: 40px;
+                Button {
+                    text: "cleck";
                 }
 
-                HorizontalBox {
-                    spacing: 8px;
-                    Button {
-                        text: "Close";
-                        clicked => {
-                            root.show_connection_dialog = false;
-                        }
-                    }
+                Text {
+                    text: "test";
                 }
             }
         }

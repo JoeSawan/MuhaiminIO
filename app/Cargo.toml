@@ -21,6 +21,7 @@ serde_json = "1.0"                                        # JSON support
 [build-dependencies]
 slint-build = "1.11.0"                                    # توليد كود Rust من ملفات .slint
 
+
 [profile.release]
 opt-level = "z"                                           # تصغير حجم الملف التنفيذي
 lto = true
